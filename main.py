@@ -1,4 +1,4 @@
-from typing import Union, Optional, Callable
+from typing import Union, Optional, Callable, List
 
 class API():
     def __init__(self, link: str, querynames: list = [], querydescriptors: dict = {}, queryform: dict = {}, datatransform: Optional[Callable] = None):
@@ -20,7 +20,7 @@ class API():
         return showstr
 
 class ChatBot():
-    def __init__(self, apis: list[API] = []):
+    def __init__(self, apis: List[API] = []):
         self.apis = apis
     
     def query(self, text):
