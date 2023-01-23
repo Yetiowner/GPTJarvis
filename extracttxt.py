@@ -2,6 +2,7 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
 def scrapeText(html, maxlen = 4000):
+    sep = "___"
     soup = BeautifulSoup(html, features="html.parser")
 
     # kill all script and style elements
@@ -9,7 +10,7 @@ def scrapeText(html, maxlen = 4000):
         script.extract()    # rip it out
 
     # get text
-    text = soup.get_text(separator=" ")
+    text = soup.get_text(separator=sep)
 
     # break into lines and remove leading and trailing space on each
     lines = (line.strip() for line in text.splitlines())
@@ -17,6 +18,9 @@ def scrapeText(html, maxlen = 4000):
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     # drop blank lines
     text = '\n'.join(chunk for chunk in chunks if chunk)
-    print(text)
-    shortenedtext = text[:min(maxlen if maxlen != -1 else len(text), len(text)-1)]
-    return shortenedtext
+    
+    splittext = [j for j in [i.replace(sep, "").strip() for i in text.split(f"{sep}\n{sep}\n{sep}\n{sep}")] if j]
+    for text in splittext:
+        print("----------")
+        print(text)
+        print("----------")

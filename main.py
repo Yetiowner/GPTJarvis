@@ -5,14 +5,23 @@ import requests
 import extracttxt
 import re
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 import time
 from bs4 import BeautifulSoup
 
-chrome_options = Options()
-chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-chrome_options.add_argument("--headless")
-browser = webdriver.Chrome(options=chrome_options)
+mode = "firefox"
+if mode == "chrome":
+    options = ChromeOptions()
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    options.add_argument("--headless")
+    browser = webdriver.Chrome(options=options)
+
+else:
+    options = FirefoxOptions()
+    options.add_argument("--headless")
+    options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+    browser = webdriver.Firefox(options=options)
 
 MODEL = "text-davinci-003"
 
@@ -97,6 +106,8 @@ class ChatBot():
             print(link)
             raise e
         
+        quit()
+        
         #print(data)
         
         textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
@@ -173,16 +184,33 @@ def loadApiKeyFromFile(file):
     with open(file, "r") as f:
         apikey = f.read()
 
-def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], maxlen=8000):
+def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], maxlen=8000):
     soup = BeautifulSoup(text, features="html.parser")
     for script in soup(["script", "style"]):
         script.extract()
 
     found = []
     for id in ids:
-        found.append(soup.find(attrs={"id": id}))
+        foundsoup = soup.find(attrs={"id": id})
+        found.append(foundsoup)
     for classs in classes:
-        found.append(soup.find(attrs={"class": classs}))
+        foundsoup = soup.find(attrs={"class": classs})
+        found.append(foundsoup)
+    
+    for founditem in found:
+        foundparents = []
+        for parent in foundparents:
+            for foundparent in foundsoup.findChildren(attrs={"id": parent}, recursive=True):
+                foundparents.append(foundparent)
+        print(len(foundparents))
+        print(foundparents)
+        for parent in foundparents:
+            children = parent.findChildren()
+            print(children)
+            for child in children:
+                text = child.get_text(separator="_")
+                print(text)
+                print("-------------")
     
     alltext = []
     for founditem in found:
@@ -204,7 +232,8 @@ def whereamiDataClean(data):
     return re.findall('<div class="aiAXrc">(.*?)</div>', data)[0] + "\n" + re.findall('<span class="fMYBhe">(.*?)</span>', data)[0]
 
 def stackoverflowDataClean(data):
-    text = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "mainbar"])
+    textlist = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "mainbar"], splitchildren=[["id", "answers"]])
+    #print(textlist)
     return text
         
 apikey = None
@@ -221,13 +250,13 @@ APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_c
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=None)
 APILocation = API("https://www.google.com/search?q=Where+am+i", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean)
 chatbot = ChatBot([APIStackOverFlow, APIBrilliant, APIQuora, APIWikipedia, APIGoogle, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
-#print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french."))
+print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french."))
 #print(chatbot.query("What is backpropogation? Get answers from billiant."))
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
 #print(chatbot.query("Give me the etymology of water using wikipedia"))
 #print(chatbot.query("Is it the evening right now? I am in England."))
 #print(chatbot.query("What is x if (e^(x^2))/x=5?"))
-print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
+#print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
 #print(chatbot.query("What is en passant?"))
 #print(chatbot.query("What is the weather today?"))
 #print(chatbot.query("Tell me a story."))
