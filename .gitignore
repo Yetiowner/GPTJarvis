@@ -1,0 +1,5 @@
+secret.txt
+__pycache__/
+chromedriver.exe
+*.log
+geckodriver.exe
