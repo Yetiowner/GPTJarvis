@@ -9,6 +9,9 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 import time
 from bs4 import BeautifulSoup
+from openai.embeddings_utils import cosine_similarity
+import pandas as pd
+import numpy as np
 
 mode = "firefox"
 if mode == "chrome":
@@ -99,7 +102,7 @@ class ChatBot():
         api = self.getAPIFromNumber(apinumber)
         
         try:
-            data = self.getDataFromLink(link, api)
+            data = self.getDataFromLink(link, api, text)
         except Exception as e:
             print(apinumber)
             print(response)
@@ -130,13 +133,36 @@ class ChatBot():
         print("----------------------------")
         return newresponse
 
+    def getMostUsefulParagraph(self, paragraphlist, prompt):
+        n = 3
+        """
+        for paragraph in paragraphlist:
+            print(paragraph[:min(len(paragraph), 500)])
+            print("-------------------------")"""
+        
+        df = pd.DataFrame(paragraphlist, columns=["items"])
+        embeddings = pd.DataFrame(get_embedding_batch(paragraphlist), columns=["embedding"])
+        print(len(df))
+        print(len(embeddings))
+        df = pd.concat([df, embeddings], axis=1)
+        embedding = get_embedding(prompt, model='text-embedding-ada-002')
+        df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        res = df.sort_values('similarities', ascending=False).head(n).iloc[:, 0].tolist()
+        print("asdf")
+        return res
+        
     
-    def getDataFromLink(self, link, api: API):
+    def getDataFromLink(self, link, api: API, prompt):
         browser.get(link)
         time.sleep(api.accessDelay)
         content = browser.page_source
         if type(api.datacleaning) == types.FunctionType:
             content = api.datacleaning(content)
+        
+        if type(content) == list:
+            content = self.getMostUsefulParagraph(content, prompt)
+            print(content)
+
         
         return content
 
@@ -176,7 +202,11 @@ and api name\n\n"
         
         return text
 
+def get_embedding(text: str, model="text-embedding-ada-002") -> list[float]:
+    return openai.Embedding.create(input=[text], model=model)["data"][0]["embedding"]
 
+def get_embedding_batch(texts: list, model="text-embedding-ada-002") -> list[float]:
+    return [openai.Embedding.create(input=texts, model=model)["data"][i]["embedding"] for i in range(len(texts))]
 
 
 def loadApiKeyFromFile(file):
@@ -197,21 +227,27 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         foundsoup = soup.find(attrs={"class": classs})
         found.append(foundsoup)
     
+    splittext = []
+    
     for founditem in found:
         foundparents = []
-        for parent in foundparents:
-            for foundparent in foundsoup.findChildren(attrs={"id": parent}, recursive=True):
+        for parent in splitchildren:
+            #print(founditem.findChildren(attrs={parent[0]: parent[1]}, recursive=True))
+            for foundparent in founditem.findChildren(attrs={parent[0]: parent[1]}, recursive=True):
                 foundparents.append(foundparent)
-        print(len(foundparents))
-        print(foundparents)
         for parent in foundparents:
-            children = parent.findChildren()
-            print(children)
+            children = parent.findChildren(recursive=False)
             for child in children:
-                text = child.get_text(separator="_")
-                print(text)
-                print("-------------")
-    
+                text = child.get_text()
+                lines = (line.strip() for line in text.splitlines())
+                # break multi-headlines into a line each
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                # drop blank lines
+                text = '\n'.join(chunk for chunk in chunks if chunk)
+                child.extract()
+                if not(text.strip()):
+                    continue
+                splittext.append(text)
     alltext = []
     for founditem in found:
         text = founditem.get_text(separator=" ")
@@ -221,9 +257,10 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         # drop blank lines
         text = '\n'.join(chunk for chunk in chunks if chunk)
         alltext.append(text)
-    text = "\n".join(alltext)
-    text = text[:min(maxlen if maxlen != -1 else len(text), len(text)-1)]
-    return text
+    
+    for text in splittext:
+        alltext.append(text)
+    return alltext
 
 def wolframDataClean(data):
     return "\n".join(re.findall('alt="(.*?)"', data))
@@ -233,8 +270,7 @@ def whereamiDataClean(data):
 
 def stackoverflowDataClean(data):
     textlist = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "mainbar"], splitchildren=[["id", "answers"]])
-    #print(textlist)
-    return text
+    return textlist
         
 apikey = None
 loadApiKeyFromFile("secret.txt") # TODO delete when publish
