@@ -13,7 +13,7 @@ from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
 
-mode = "firefox"
+mode = "chrome"
 if mode == "chrome":
     options = ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -88,7 +88,7 @@ class ChatBot():
             engine=MODEL,
             prompt=text,
             temperature=1,
-            max_tokens=512,
+            max_tokens=1024,
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0
@@ -109,9 +109,8 @@ class ChatBot():
             print(link)
             raise e
         
-        quit()
         
-        #print(data)
+        print(data)
         
         textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
         
@@ -141,15 +140,13 @@ class ChatBot():
             print("-------------------------")"""
         
         df = pd.DataFrame(paragraphlist, columns=["items"])
-        embeddings = pd.DataFrame(get_embedding_batch(paragraphlist), columns=["embedding"])
-        print(len(df))
-        print(len(embeddings))
-        df = pd.concat([df, embeddings], axis=1)
+        df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
         res = df.sort_values('similarities', ascending=False).head(n).iloc[:, 0].tolist()
-        print("asdf")
-        return res
+        chosenres = "\n\n\n".join(res)
+        #print(chosenres)
+        return chosenres
         
     
     def getDataFromLink(self, link, api: API, prompt):
@@ -161,7 +158,6 @@ class ChatBot():
         
         if type(content) == list:
             content = self.getMostUsefulParagraph(content, prompt)
-            print(content)
 
         
         return content
@@ -202,10 +198,10 @@ and api name\n\n"
         
         return text
 
-def get_embedding(text: str, model="text-embedding-ada-002") -> list[float]:
+def get_embedding(text: str, model="text-embedding-ada-002"):
     return openai.Embedding.create(input=[text], model=model)["data"][0]["embedding"]
 
-def get_embedding_batch(texts: list, model="text-embedding-ada-002") -> list[float]:
+def get_embedding_batch(texts: list, model="text-embedding-ada-002"):
     return [openai.Embedding.create(input=texts, model=model)["data"][i]["embedding"] for i in range(len(texts))]
 
 
@@ -214,7 +210,7 @@ def loadApiKeyFromFile(file):
     with open(file, "r") as f:
         apikey = f.read()
 
-def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], maxlen=8000):
+def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], maxofeachsection = 10):
     soup = BeautifulSoup(text, features="html.parser")
     for script in soup(["script", "style"]):
         script.extract()
@@ -258,7 +254,10 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         text = '\n'.join(chunk for chunk in chunks if chunk)
         alltext.append(text)
     
-    for text in splittext:
+    
+    for index, text in enumerate(splittext):
+        """if index > maxofeachsection:
+            break"""
         alltext.append(text)
     return alltext
 
@@ -286,7 +285,8 @@ APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_c
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=None)
 APILocation = API("https://www.google.com/search?q=Where+am+i", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean)
 chatbot = ChatBot([APIStackOverFlow, APIBrilliant, APIQuora, APIWikipedia, APIGoogle, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
-print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french."))
+#print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
+print(chatbot.query("What is answer to stack overflow question 75221583?"))
 #print(chatbot.query("What is backpropogation? Get answers from billiant."))
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
 #print(chatbot.query("Give me the etymology of water using wikipedia"))
