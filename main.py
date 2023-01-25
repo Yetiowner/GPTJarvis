@@ -13,7 +13,7 @@ from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
 
-mode = "chrome"
+mode = "firefox"
 if mode == "chrome":
     options = ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -26,6 +26,13 @@ else:
     options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
     browser = webdriver.Firefox(options=options)
 
+"""browser.get("https://stackoverflow.com/questions/36768068/get-meta-tag-content-property-with-beautifulsoup-and-python")
+text = browser.page_source
+soup = BeautifulSoup(text, features="html.parser")
+for script in soup(["script", "style"]):
+    script.extract()
+print(soup.attrs)
+quit()"""
 MODEL = "text-davinci-003"
 
 class API():
@@ -132,7 +139,7 @@ class ChatBot():
         print("----------------------------")
         return newresponse
 
-    def getMostUsefulParagraph(self, paragraphlist, prompt):
+    def getMostUsefulParagraph(self, paragraphlist, valuepairs, prompt):
         n = 3
         """
         for paragraph in paragraphlist:
@@ -144,9 +151,18 @@ class ChatBot():
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
         res = df.sort_values('similarities', ascending=False).head(n).iloc[:, 0].tolist()
-        chosenres = "\n\n\n".join(res)
-        #print(chosenres)
-        return chosenres
+
+        ress = []
+        for chosenres in res:
+            for i in valuepairs:
+                if i[0] == chosenres:
+                    chosenres += "\n" + i[1]
+                    break
+                if i[1] == chosenres:
+                    chosenres = i[0] + "\n" + chosenres
+            ress.append(chosenres)
+
+        return "\n\n\n".join(ress)
         
     
     def getDataFromLink(self, link, api: API, prompt):
@@ -157,7 +173,8 @@ class ChatBot():
             content = api.datacleaning(content)
         
         if type(content) == list:
-            content = self.getMostUsefulParagraph(content, prompt)
+            content, valuepairs = content
+            content = self.getMostUsefulParagraph(content, valuepairs, prompt)
 
         
         return content
@@ -224,6 +241,7 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         found.append(foundsoup)
     
     splittext = []
+    valuepairs = []
     
     for founditem in found:
         foundparents = []
@@ -234,16 +252,20 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         for parent in foundparents:
             children = parent.findChildren(recursive=False)
             for child in children:
-                text = child.get_text()
-                lines = (line.strip() for line in text.splitlines())
+                text = child.get_text(strip=True, separator=" ")
+                """lines = (line.strip() for line in text.splitlines())
                 # break multi-headlines into a line each
                 chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
                 # drop blank lines
-                text = '\n'.join(chunk for chunk in chunks if chunk)
-                child.extract()
+                text = '\n'.join(chunk for chunk in chunks if chunk)"""
                 if not(text.strip()):
                     continue
+
                 splittext.append(text)
+                text1 = "\n".join([f"{i[0]}:{i[1]}" for i in child.attrs.items()])
+                splittext.append(text1)
+                valuepairs.append([text1, text])
+                child.extract()
     alltext = []
     for founditem in found:
         text = founditem.get_text(separator=" ")
@@ -259,7 +281,7 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         """if index > maxofeachsection:
             break"""
         alltext.append(text)
-    return alltext
+    return alltext, valuepairs
 
 def wolframDataClean(data):
     return "\n".join(re.findall('alt="(.*?)"', data))
@@ -268,8 +290,8 @@ def whereamiDataClean(data):
     return re.findall('<div class="aiAXrc">(.*?)</div>', data)[0] + "\n" + re.findall('<span class="fMYBhe">(.*?)</span>', data)[0]
 
 def stackoverflowDataClean(data):
-    textlist = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "mainbar"], splitchildren=[["id", "answers"]])
-    return textlist
+    textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "mainbar"], splitchildren=[["id", "answers"]])
+    return [textlist, valuepairs]
         
 apikey = None
 loadApiKeyFromFile("secret.txt") # TODO delete when publish
@@ -286,7 +308,7 @@ APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=None)
 APILocation = API("https://www.google.com/search?q=Where+am+i", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean)
 chatbot = ChatBot([APIStackOverFlow, APIBrilliant, APIQuora, APIWikipedia, APIGoogle, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
-print(chatbot.query("What is answer to stack overflow question 75221583?"))
+print(chatbot.query("What was the question for stack overflow question 75221583?"))
 #print(chatbot.query("What is backpropogation? Get answers from billiant."))
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
 #print(chatbot.query("Give me the etymology of water using wikipedia"))
