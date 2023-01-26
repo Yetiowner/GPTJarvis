@@ -196,7 +196,8 @@ class ChatBot():
 
     def generateAnalysisText(self, data):
         return "Information:\n\n" + data + "\n\nAnswer the following question using the information \
-I just gave you, not from your own knowledge base."
+I just gave you, not from your own knowledge base. Answer like you are Jarvis from Iron Man. Occasionally \
+include pleasantly sarcastic comments."
 
     def generateSetupText(self):
         text = "I will give you a series of API link formats, and whenever \
@@ -313,13 +314,14 @@ print(chatbot.query("What was the question for stack overflow question 75221583?
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
 #print(chatbot.query("Give me the etymology of water using wikipedia"))
 #print(chatbot.query("Is it the evening right now? I am in England."))
-#print(chatbot.query("What is x if (e^(x^2))/x=5?"))
+#print(chatbot.query("What is x if (e^(x^2))/x=5+x?"))
 #print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
 #print(chatbot.query("What is en passant?"))
 #print(chatbot.query("What is the weather today?"))
 #print(chatbot.query("Tell me a story."))
 #print(chatbot.query("How many dogecoin is a dollar worth right now?"))
 #print(chatbot.query("What is my IP address?"))
-#print(chatbot.query("Where am I?"))
+#print(chatbot.query("Where am I?")) # TODO fix
 #print(chatbot.query("How many people live in the US right now according to google?"))
 #print(chatbot.query("Translate the entire rick roll lyrics into french"))
+#print(chatbot.query("How does the queen move?"))
