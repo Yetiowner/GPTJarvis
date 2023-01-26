@@ -13,14 +13,13 @@ from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
 
-mode = "firefox"
-if mode == "chrome":
+try:
     options = ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
     options.add_argument("--headless")
     browser = webdriver.Chrome(options=options)
 
-else:
+except:
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
@@ -291,7 +290,7 @@ def whereamiDataClean(data):
     return re.findall('<div class="aiAXrc">(.*?)</div>', data)[0] + "\n" + re.findall('<span class="fMYBhe">(.*?)</span>', data)[0]
 
 def stackoverflowDataClean(data):
-    textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "mainbar"], splitchildren=[["id", "answers"]])
+    textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "question", "answers"], splitchildren=[["id", "answers"]])
     return [textlist, valuepairs]
         
 apikey = None
