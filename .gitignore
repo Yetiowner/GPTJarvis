@@ -3,3 +3,5 @@ __pycache__/
 chromedriver.exe
 *.log
 geckodriver.exe
+usage.log
+out.txt

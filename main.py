@@ -1,3 +1,4 @@
+import os
 from typing import Union, Optional, Callable, List
 import types
 import openai
@@ -12,6 +13,9 @@ from bs4 import BeautifulSoup
 from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
+
+with open("usage.log", "a") as file:
+    file.write("--------------------\n")
 
 try:
     options = ChromeOptions()
@@ -82,6 +86,7 @@ class ChatBot():
         frequency_penalty=0.0,
         presence_penalty=0.0
         )
+        logUsage(response)
 
         response = response["choices"][0]["text"].lstrip()
         #print(response)
@@ -99,6 +104,7 @@ class ChatBot():
             frequency_penalty=0.0,
             presence_penalty=0.0
             )
+            logUsage(response)
             response = response["choices"][0]["text"].lstrip()
             return response
 
@@ -116,7 +122,7 @@ class ChatBot():
             raise e
         
         
-        print(data)
+        
         
         textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
         
@@ -131,6 +137,7 @@ class ChatBot():
         frequency_penalty=0.0,
         presence_penalty=0.6
         )
+        logUsage(newresponse)
 
         #print(newresponse)
 
@@ -145,6 +152,7 @@ class ChatBot():
             print(paragraph[:min(len(paragraph), 500)])
             print("-------------------------")"""
         
+        paragraphlist = [i for i in paragraphlist if i != ""]
         df = pd.DataFrame(paragraphlist, columns=["items"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
@@ -172,8 +180,11 @@ class ChatBot():
             content = api.datacleaning(content)
         
         if type(content) == list:
+            with open("out.txt", "w", encoding="utf-8") as file:
+                file.write("\n---------------\n".join(content[0]))
             content, valuepairs = content
             content = self.getMostUsefulParagraph(content, valuepairs, prompt)
+            print(content)
 
         
         return content
@@ -216,11 +227,27 @@ and api name\n\n"
         return text
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
-    return openai.Embedding.create(input=[text], model=model)["data"][0]["embedding"]
+    response = openai.Embedding.create(input=[text], model=model)
+    logUsage(response)
+    return response["data"][0]["embedding"]
 
 def get_embedding_batch(texts: list, model="text-embedding-ada-002"):
-    return [openai.Embedding.create(input=texts, model=model)["data"][i]["embedding"] for i in range(len(texts))]
+    texts = [i for i in texts if i != ""]
+    responses = openai.Embedding.create(input=texts, model=model)
+    logUsage(responses)
+    
+    return [responses["data"][i]["embedding"] for i in range(len(texts))]
 
+def remove_special(text):
+    return ''.join([i if ord(i) < 128 else ' ' for i in text])
+
+def logUsage(openairesponse):
+    with open("usage.log", "a") as file:
+        try:
+            file.write(f"{openairesponse['model']}: {openairesponse['usage']['total_tokens']}\n")
+        except:
+            print(openairesponse)
+            raise ValueError
 
 def loadApiKeyFromFile(file):
     global apikey
@@ -234,16 +261,17 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
 
     found = []
     for id in ids:
-        foundsoup = soup.find(attrs={"id": id})
-        found.append(foundsoup)
+        foundsoup = soup.find_all(attrs={"id": id})
+        found += foundsoup
     for classs in classes:
-        foundsoup = soup.find(attrs={"class": classs})
-        found.append(foundsoup)
+        foundsoup = soup.find_all(attrs={"class": classs})
+        found += foundsoup
     
     splittext = []
     valuepairs = []
     
-    for founditem in found:
+    newfound = []
+    for founditem in [soup]:
         foundparents = []
         for parent in splitchildren:
             #print(founditem.findChildren(attrs={parent[0]: parent[1]}, recursive=True))
@@ -252,12 +280,10 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         for parent in foundparents:
             children = parent.findChildren(recursive=False)
             for child in children:
-                text = child.get_text(strip=True, separator=" ")
-                """lines = (line.strip() for line in text.splitlines())
-                # break multi-headlines into a line each
-                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-                # drop blank lines
-                text = '\n'.join(chunk for chunk in chunks if chunk)"""
+                newfound.append(child)
+
+                """text = child.get_text(strip=True, separator=" ")
+            
                 if not(text.strip()):
                     continue
 
@@ -265,22 +291,32 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
                 text1 = "\n".join([f"{i[0]}:{i[1]}" for i in child.attrs.items()])
                 splittext.append(text1)
                 valuepairs.append([text1, text])
-                child.extract()
+                child.extract()"""
+    
+    for id in ids:
+        foundsoup = soup.find_all(attrs={"id": id})
+        newfound += foundsoup
+    for classs in classes:
+        foundsoup = soup.find_all(attrs={"class": classs})
+        newfound += foundsoup
+        
     alltext = []
-    for founditem in found:
-        text = founditem.get_text(separator=" ")
-        lines = (line.strip() for line in text.splitlines())
-        # break multi-headlines into a line each
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        # drop blank lines
-        text = '\n'.join(chunk for chunk in chunks if chunk)
+    accum = 0
+    for founditem in newfound:
+        text = founditem.get_text(strip=True, separator=" ")
+        if not(text.strip()):
+            continue
+        
+        
+        accum += len(text)
+        if accum > 15000:
+            continue
         alltext.append(text)
-    
-    
-    for index, text in enumerate(splittext):
-        """if index > maxofeachsection:
-            break"""
-        alltext.append(text)
+        text1 = "\n".join([f"{i[0]}:{i[1]}" for i in founditem.attrs.items()])
+        alltext.append(text1)
+        valuepairs.append([text1, text])
+        
+
     return alltext, valuepairs
 
 def wolframDataClean(data):
@@ -292,15 +328,24 @@ def whereamiDataClean(data):
 def stackoverflowDataClean(data):
     textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "question", "answers"], splitchildren=[["id", "answers"]])
     return [textlist, valuepairs]
+
+def googleDataClean(data):
+    textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, classes=["ULSxyf"], ids=["appbar"], splitchildren=[["jsname", "N760b"]])
+    return [textlist, valuepairs]
+
+def wikiDataClean(data):
+    textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, splitchildren=[["class", "mw-parser-output"]])
+    #print([type(valuepairs) for i in textlist])
+    return [textlist, valuepairs]
         
 apikey = None
 loadApiKeyFromFile("secret.txt") # TODO delete when publish
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
 APIBrilliant = API("https://brilliant.org/wiki/{}", ["subject"])
 APIQuora = API("https://www.quora.com/search?q={}", ["query"])
-APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"])
-APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"])
-APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"})
+APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)
+APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
+APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"}, datacleaning=None)
 APIMaths = API("https://www.wolframalpha.com/input?i={}", ["mathsquestion"], queryform={"mathsquestion": "Pure maths expression, using the %2B format"}, accessDelay=7, datacleaning=wolframDataClean)
 APIWeather = API("https://www.metoffice.gov.uk/weather/forecast/u1214b469#?date={}", ["date"], queryform={"date": "yyyy-mm-dd"})
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=None)
@@ -308,10 +353,10 @@ APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=None)
 APILocation = API("https://www.google.com/search?q=Where+am+i", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean)
 chatbot = ChatBot([APIStackOverFlow, APIBrilliant, APIQuora, APIWikipedia, APIGoogle, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
-print(chatbot.query("What was the question for stack overflow question 75221583?"))
+#print(chatbot.query("How many answers are on stack overflow question 75221583?"))
 #print(chatbot.query("What is backpropogation? Get answers from billiant."))
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
-#print(chatbot.query("Give me the etymology of water using wikipedia"))
+print(chatbot.query("Give me the etymology of water using the wikipedia article for water."))
 #print(chatbot.query("Is it the evening right now? I am in England."))
 #print(chatbot.query("What is x if (e^(x^2))/x=5+x?"))
 #print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
@@ -322,5 +367,6 @@ print(chatbot.query("What was the question for stack overflow question 75221583?
 #print(chatbot.query("What is my IP address?"))
 #print(chatbot.query("Where am I?")) # TODO fix
 #print(chatbot.query("How many people live in the US right now according to google?"))
+#print(chatbot.query("How many people have covid right now? Use google."))
 #print(chatbot.query("Translate the entire rick roll lyrics into french"))
 #print(chatbot.query("How does the queen move?"))
