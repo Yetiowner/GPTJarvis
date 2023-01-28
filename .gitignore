@@ -5,3 +5,4 @@ chromedriver.exe
 geckodriver.exe
 usage.log
 out.txt
+keys.json

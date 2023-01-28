@@ -13,29 +13,21 @@ from bs4 import BeautifulSoup
 from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
+import json
 
 with open("usage.log", "a") as file:
     file.write("--------------------\n")
 
-try:
-    options = ChromeOptions()
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    options.add_argument("--headless")
-    browser = webdriver.Chrome(options=options)
 
-except:
-    options = FirefoxOptions()
-    options.add_argument("--headless")
-    options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
-    browser = webdriver.Firefox(options=options)
+options = FirefoxOptions()
+options.add_argument("--headless")
+options.preferences["permissions.default.geo"] = 1
+options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+browser = webdriver.Firefox(options=options)
 
-"""browser.get("https://stackoverflow.com/questions/36768068/get-meta-tag-content-property-with-beautifulsoup-and-python")
-text = browser.page_source
-soup = BeautifulSoup(text, features="html.parser")
-for script in soup(["script", "style"]):
-    script.extract()
-print(soup.attrs)
-quit()"""
+with open("keys.json", "r") as file:
+    APIKEYS = json.load(file)
+
 MODEL = "text-davinci-003"
 
 class API():
@@ -89,7 +81,6 @@ class ChatBot():
         logUsage(response)
 
         response = response["choices"][0]["text"].lstrip()
-        #print(response)
 
 
         try:
@@ -122,11 +113,9 @@ class ChatBot():
             raise e
         
         
-        
-        
         textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
         
-        #print(textToAnalyse)
+        print(textToAnalyse)
 
         newresponse = openai.Completion.create(
         engine=MODEL,
@@ -206,8 +195,7 @@ class ChatBot():
 
     def generateAnalysisText(self, data):
         return "Information:\n\n" + data + "\n\nAnswer the following question using the information \
-I just gave you, not from your own knowledge base. Answer like you are Jarvis from Iron Man. Occasionally \
-include pleasantly sarcastic comments."
+I just gave you, not from your own knowledge base. Answer like you are Jarvis from Iron Man."
 
     def generateSetupText(self):
         text = "I will give you a series of API link formats, and whenever \
@@ -309,7 +297,7 @@ def getTextFromHTMLClassesAndIDs(text, classes=[], ids=[], splitchildren = [], m
         
         
         accum += len(text)
-        if accum > 15000:
+        if accum > 20000:
             continue
         alltext.append(text)
         text1 = "\n".join([f"{i[0]}:{i[1]}" for i in founditem.attrs.items()])
@@ -323,7 +311,7 @@ def wolframDataClean(data):
     return "\n".join(re.findall('alt="(.*?)"', data))
 
 def whereamiDataClean(data):
-    return re.findall('<div class="aiAXrc">(.*?)</div>', data)[0] + "\n" + re.findall('<span class="fMYBhe">(.*?)</span>', data)[0]
+    return "Address: " + re.findall('<div id="address" class="datavalue">(.*?)</div>', data)[0] + "\nLat: " + re.findall('<div id="latitude" class="datavalue">(.*?)</div>', data)[0] + "\nLon: " + re.findall('<div id="longitude" class="datavalue">(.*?)</div>', data)[0]
 
 def stackoverflowDataClean(data):
     textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, classes=["d-flex fw-wrap pb8 mb16 bb bc-black-075"], ids=["question-header", "question", "answers"], splitchildren=[["id", "answers"]])
@@ -335,33 +323,34 @@ def googleDataClean(data):
 
 def wikiDataClean(data):
     textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, splitchildren=[["class", "mw-parser-output"]])
-    #print([type(valuepairs) for i in textlist])
+    return [textlist, valuepairs]
+
+def weatherDataClean(data):
+    textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, splitchildren=[["id", "forecastContent"]])
     return [textlist, valuepairs]
         
 apikey = None
 loadApiKeyFromFile("secret.txt") # TODO delete when publish
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
-APIBrilliant = API("https://brilliant.org/wiki/{}", ["subject"])
 APIQuora = API("https://www.quora.com/search?q={}", ["query"])
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)
-APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
+#APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
 APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"}, datacleaning=None)
 APIMaths = API("https://www.wolframalpha.com/input?i={}", ["mathsquestion"], queryform={"mathsquestion": "Pure maths expression, using the %2B format"}, accessDelay=7, datacleaning=wolframDataClean)
-APIWeather = API("https://www.metoffice.gov.uk/weather/forecast/u1214b469#?date={}", ["date"], queryform={"date": "yyyy-mm-dd"})
+APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["WeatherAPI"] + "&q={}&aqi=no", ["position"], queryform={"position": "Latitude, Longitude or IP address or post code or city name"}, datacleaning=None)
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=None)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=None)
-APILocation = API("https://www.google.com/search?q=Where+am+i", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean)
-chatbot = ChatBot([APIStackOverFlow, APIBrilliant, APIQuora, APIWikipedia, APIGoogle, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
+APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
+chatbot = ChatBot([APIStackOverFlow, APIQuora, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
 #print(chatbot.query("How many answers are on stack overflow question 75221583?"))
-#print(chatbot.query("What is backpropogation? Get answers from billiant."))
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
-print(chatbot.query("Give me the etymology of water using the wikipedia article for water."))
+#print(chatbot.query("Give me the etymology of water using the wikipedia article for water."))
 #print(chatbot.query("Is it the evening right now? I am in England."))
 #print(chatbot.query("What is x if (e^(x^2))/x=5+x?"))
 #print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
 #print(chatbot.query("What is en passant?"))
-#print(chatbot.query("What is the weather today?"))
+#print(chatbot.query("What is the weather today? I live at 30, 30."))
 #print(chatbot.query("Tell me a story."))
 #print(chatbot.query("How many dogecoin is a dollar worth right now?"))
 #print(chatbot.query("What is my IP address?"))
@@ -369,4 +358,4 @@ print(chatbot.query("Give me the etymology of water using the wikipedia article 
 #print(chatbot.query("How many people live in the US right now according to google?"))
 #print(chatbot.query("How many people have covid right now? Use google."))
 #print(chatbot.query("Translate the entire rick roll lyrics into french"))
-#print(chatbot.query("How does the queen move?"))
+#print(chatbot.query("How does the queen move? Check from wikipedia"))
