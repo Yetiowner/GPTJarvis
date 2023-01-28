@@ -6,3 +6,4 @@ geckodriver.exe
 usage.log
 out.txt
 keys.json
+embedded_questions.csv

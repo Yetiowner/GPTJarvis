@@ -29,6 +29,7 @@ with open("keys.json", "r") as file:
     APIKEYS = json.load(file)
 
 MODEL = "text-davinci-003"
+JARVIS = "\nAnswer like you are Jarvis from Iron Man."
 
 class API():
     def __init__(self, link: str, querynames: list = [], querydescriptors: dict = {}, queryform: dict = {}, description: Optional[str] = None, datacleaning: Optional[Callable] = extracttxt.scrapeText, accessDelay = 0):
@@ -48,10 +49,9 @@ class API():
     
     def showApiLink(self):
         queriesinfo = ", and ".join([f"{{{self.querynames[index]}}} is replaced with {self.querydescriptors[self.querynames[index]] if self.querynames[index] in self.querydescriptors.keys() else 'the query'} I give you{' and is of the form ' + (self.queryform[self.querynames[index]]) if self.querynames[index] in self.queryform.keys() else ''}" for index in range(len(self.querynames))])
-        if self.description:
+        if self.description != None:
             queriesinfo += f". Description: {self.description}"
-        showstr = f"""API {self.number}:
-        {self.link.format(*["{" + i + "}" for i in self.querynames])}, where {queriesinfo}"""
+        showstr = f"""{self.link.format(*["{" + i + "}" for i in self.querynames])}, where {queriesinfo}"""
         return showstr
     
     def __repr__(self):
@@ -60,12 +60,20 @@ class API():
 class ChatBot():
     def __init__(self, apis: List[API] = []):
         self.apis = apis
+        for index, api in enumerate(self.apis):
+            api.number = index + 1
     
     def query(self, text):
         print("----------------------------")
-        textToQuery = self.generateSetupText() + text
-        #print(textToQuery)
         openai.api_key = apikey
+        try:
+            embeddedquery = self.loadAPIQueryEmbedding()
+        except:
+            self.makeAPIQueryEmbedding()
+            embeddedquery = self.loadAPIQueryEmbedding()
+        textToQuery, apinumber = self.generateSetupText(embeddedquery, text)
+
+        #print(textToQuery)
 
         #print(textToQuery)
         
@@ -79,6 +87,7 @@ class ChatBot():
         presence_penalty=0.0
         )
         logUsage(response)
+
 
         response = response["choices"][0]["text"].lstrip()
 
@@ -101,7 +110,6 @@ class ChatBot():
 
         print(link)
 
-        apinumber = self.getApiNumberFromString(response[response.index(link)+len(link):])
         api = self.getAPIFromNumber(apinumber)
         
         try:
@@ -133,6 +141,33 @@ class ChatBot():
         newresponse = newresponse["choices"][0]["text"].lstrip()
         print("----------------------------")
         return newresponse
+    
+    def loadAPIQueryEmbedding(self):
+        df = pd.read_csv('embedded_questions.csv')
+        df["embedding"] = df.embedding.apply(eval)
+        df["embedding"] = df.embedding.apply(np.array)
+        return df
+    
+    def makeAPIQueryEmbedding(self):
+        apitexts = [i.showApiLink() for i in self.apis]
+        df = pd.DataFrame(apitexts, columns=["items"])
+        df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
+        df.to_csv('embedded_questions.csv', index=False)
+
+    def generateSetupText(self, df, prompt):
+        embedding = get_embedding(prompt, model='text-embedding-ada-002')
+        df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        res = df.sort_values('similarities', ascending=False).head(1)
+        newres = res.values.flatten().tolist()
+        apinum = res.index[0]+1
+        if newres[-1] > 0.6:
+            api = newres[0]
+            text = f"Here is an API: {api}.\n\n Reply with this api filled in with \
+the following information: {prompt}. Just provide the link, nothing else."
+            return text, apinum
+        else:
+            return prompt + JARVIS, None
+
 
     def getMostUsefulParagraph(self, paragraphlist, valuepairs, prompt):
         n = 3
@@ -195,24 +230,8 @@ class ChatBot():
 
     def generateAnalysisText(self, data):
         return "Information:\n\n" + data + "\n\nAnswer the following question using the information \
-I just gave you, not from your own knowledge base. Answer like you are Jarvis from Iron Man."
+I just gave you, not from your own knowledge base." + JARVIS
 
-    def generateSetupText(self):
-        text = "I will give you a series of API link formats, and whenever \
-I ask you a question relating to a specific subject, reply with \
-the api format filled in the the query I will give you. Pick the \
-API most suited to the question type. If the question is suitable \
-for none of the APIs, don't reply with a link, instead reply with \
-your own knowledge base. Do not say whether an API link is suitable \
-for the question, just reply with your own knowledge. If you do use an \
-API, underneath the link please say the number of the API you used \
-in brackets. The first thing you say should be the link, and only the link \
-and api name\n\n"
-        for index, api in enumerate(self.apis):
-            api.number = index + 1
-            text += api.showApiLink()+"\n\n"
-        
-        return text
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
     response = openai.Embedding.create(input=[text], model=model)
@@ -328,18 +347,27 @@ def wikiDataClean(data):
 def weatherDataClean(data):
     textlist, valuepairs = getTextFromHTMLClassesAndIDs(data, splitchildren=[["id", "forecastContent"]])
     return [textlist, valuepairs]
+
+def jsonDataClean(data):
+    soup = BeautifulSoup(data, features="html.parser")
+    parsed = json.loads(soup.text)
+    text = str(parsed)
+    text = text.replace("'", "")
+    return text
+    
+
         
 apikey = None
 loadApiKeyFromFile("secret.txt") # TODO delete when publish
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
-APIQuora = API("https://www.quora.com/search?q={}", ["query"])
+APIQuora = API("https://www.quora.com/search?q={}", ["query"], description="Used to find out people's opinions")
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)
 #APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
-APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"}, datacleaning=None)
+APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"}, datacleaning=jsonDataClean)
 APIMaths = API("https://www.wolframalpha.com/input?i={}", ["mathsquestion"], queryform={"mathsquestion": "Pure maths expression, using the %2B format"}, accessDelay=7, datacleaning=wolframDataClean)
-APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["WeatherAPI"] + "&q={}&aqi=no", ["position"], queryform={"position": "Latitude, Longitude or IP address or post code or city name"}, datacleaning=None)
-APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=None)
-APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=None)
+APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["WeatherAPI"] + "&q={}&aqi=no", ["location"], queryform={"location": "Latitude, Longitude or IP address or post code or city name"}, datacleaning=jsonDataClean)
+APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
+APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
 APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
 chatbot = ChatBot([APIStackOverFlow, APIQuora, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
@@ -353,9 +381,13 @@ chatbot = ChatBot([APIStackOverFlow, APIQuora, APIWikipedia, APIDateTime, APIMat
 #print(chatbot.query("What is the weather today? I live at 30, 30."))
 #print(chatbot.query("Tell me a story."))
 #print(chatbot.query("How many dogecoin is a dollar worth right now?"))
-#print(chatbot.query("What is my IP address?"))
+print(chatbot.query("What is my IP address?"))
 #print(chatbot.query("Where am I?")) # TODO fix
 #print(chatbot.query("How many people live in the US right now according to google?"))
 #print(chatbot.query("How many people have covid right now? Use google."))
 #print(chatbot.query("Translate the entire rick roll lyrics into french"))
 #print(chatbot.query("How does the queen move? Check from wikipedia"))
+# Compound
+#print(chatbot.query("What is the weather today? I live in England. Also, when was it last updated?"))
+#print(chatbot.query("asdfasdfasdfasdfasdfasdf"))
+#print(chatbot.query("How many dogecoin is a dollar worth right now?"))
