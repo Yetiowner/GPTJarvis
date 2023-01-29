@@ -29,7 +29,8 @@ with open("keys.json", "r") as file:
     APIKEYS = json.load(file)
 
 MODEL = "text-davinci-003"
-JARVIS = "\nAnswer like you are Jarvis from Iron Man."
+JARVIS = "\nYou are Jarvis from Iron Man, so answer like him. Call me Sir. If I ask a question I should know the answer to, \
+be slightly sarcastic in your response."
 
 class API():
     def __init__(self, link: str, querynames: list = [], querydescriptors: dict = {}, queryform: dict = {}, description: Optional[str] = None, datacleaning: Optional[Callable] = extracttxt.scrapeText, accessDelay = 0):
@@ -57,11 +58,29 @@ class API():
     def __repr__(self):
         return f"API {self.number}: {self.link}"
 
+class Function():
+    def __init__(self, function, args=[], kwargs={}):
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+    
+    def showFunction(self):
+        return f"{self.function}({', '.join(self.args)})"
+
 class ChatBot():
     def __init__(self, apis: List[API] = []):
         self.apis = apis
         for index, api in enumerate(self.apis):
             api.number = index + 1
+        self.info = self.genInfoText()
+    
+    def genInfoText(self):
+        out = ""
+        with open("aditionalInfo.txt", "r") as file:
+            out += file.read() + "\n"
+        out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
+        out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
+        return out
     
     def query(self, text):
         print("----------------------------")
@@ -90,14 +109,16 @@ class ChatBot():
 
 
         response = response["choices"][0]["text"].lstrip()
+        print(response)
 
 
         try:
             link = re.findall('https?://[^\s]+', response)[0]
         except IndexError:
+            print(self.info + "\n" + text + "\n" + JARVIS)
             response = openai.Completion.create(
             engine=MODEL,
-            prompt=text,
+            prompt=self.info + "\n" + JARVIS + "\n" + text,
             temperature=1,
             max_tokens=1024,
             top_p=1.0,
@@ -160,13 +181,15 @@ class ChatBot():
         res = df.sort_values('similarities', ascending=False).head(1)
         newres = res.values.flatten().tolist()
         apinum = res.index[0]+1
+        print(newres[-1])
         if newres[-1] > 0.6:
             api = newres[0]
             text = f"Here is an API: {api}.\n\n Reply with this api filled in with \
-the following information: {prompt}. Just provide the link, nothing else."
+the following information: {self.info}\n\n{prompt}. Just provide the link, nothing else. \
+If the api is not suitable for this query, reply with None."
             return text, apinum
         else:
-            return prompt + JARVIS, None
+            return self.info + "\n" + JARVIS + "\n" + prompt, None
 
 
     def getMostUsefulParagraph(self, paragraphlist, valuepairs, prompt):
@@ -229,7 +252,7 @@ the following information: {prompt}. Just provide the link, nothing else."
         return int(out)
 
     def generateAnalysisText(self, data):
-        return "Information:\n\n" + data + "\n\nAnswer the following question using the information \
+        return "Information:\n" + self.info + "\n" + data + "\n\nAnswer the following question using the information \
 I just gave you, not from your own knowledge base." + JARVIS
 
 
@@ -356,11 +379,14 @@ def jsonDataClean(data):
     return text
     
 
+def explode(suit):
+    pass
+
         
 apikey = None
 loadApiKeyFromFile("secret.txt") # TODO delete when publish
+
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
-APIQuora = API("https://www.quora.com/search?q={}", ["query"], description="Used to find out people's opinions")
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)
 #APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
 APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"}, datacleaning=jsonDataClean)
@@ -369,25 +395,28 @@ APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["Wea
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
 APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
-chatbot = ChatBot([APIStackOverFlow, APIQuora, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
+FunctionExplode = Function(explode, args=["suit"])
+chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
+
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
 #print(chatbot.query("How many answers are on stack overflow question 75221583?"))
 #print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
 #print(chatbot.query("Give me the etymology of water using the wikipedia article for water."))
-#print(chatbot.query("Is it the evening right now? I am in England."))
+#print(chatbot.query("Is it the evening right now?"))
 #print(chatbot.query("What is x if (e^(x^2))/x=5+x?"))
 #print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
 #print(chatbot.query("What is en passant?"))
 #print(chatbot.query("What is the weather today? I live at 30, 30."))
 #print(chatbot.query("Tell me a story."))
 #print(chatbot.query("How many dogecoin is a dollar worth right now?"))
-print(chatbot.query("What is my IP address?"))
+#print(chatbot.query("What is my IP address?"))
 #print(chatbot.query("Where am I?")) # TODO fix
 #print(chatbot.query("How many people live in the US right now according to google?"))
 #print(chatbot.query("How many people have covid right now? Use google."))
 #print(chatbot.query("Translate the entire rick roll lyrics into french"))
 #print(chatbot.query("How does the queen move? Check from wikipedia"))
-# Compound
-#print(chatbot.query("What is the weather today? I live in England. Also, when was it last updated?"))
-#print(chatbot.query("asdfasdfasdfasdfasdfasdf"))
-#print(chatbot.query("How many dogecoin is a dollar worth right now?"))
+# Information test
+#print(chatbot.query("What is my name?"))
+#print(chatbot.query("What is your name? Also, what is my name?"))
+# Programming test
+print(chatbot.query("Jarvis, do me a favour and blow mark 42"))
