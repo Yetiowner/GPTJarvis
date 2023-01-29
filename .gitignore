@@ -7,4 +7,5 @@ usage.log
 out.txt
 keys.json
 embedded_questions.csv
+embedded_functions.csv
 aditionalInfo.txt

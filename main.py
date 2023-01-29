@@ -59,19 +59,24 @@ class API():
         return f"API {self.number}: {self.link}"
 
 class Function():
-    def __init__(self, function, args=[], kwargs={}):
+    def __init__(self, function, args=[], kwargs={}, typeannots={}):
         self.function = function
         self.args = args
         self.kwargs = kwargs
+        self.typeannots = typeannots
+        self.number = 0
     
     def showFunction(self):
-        return f"{self.function}({', '.join(self.args)})"
+        return f"{self.function.__name__}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}"
 
 class ChatBot():
-    def __init__(self, apis: List[API] = []):
+    def __init__(self, apis: List[API] = [], functions: List[Function] = []):
         self.apis = apis
+        self.functions = functions
         for index, api in enumerate(self.apis):
             api.number = index + 1
+        for index, function in enumerate(self.functions):
+            function.number = index + 1
         self.info = self.genInfoText()
     
     def genInfoText(self):
@@ -90,7 +95,15 @@ class ChatBot():
         except:
             self.makeAPIQueryEmbedding()
             embeddedquery = self.loadAPIQueryEmbedding()
-        textToQuery, apinumber = self.generateSetupText(embeddedquery, text)
+
+        try:
+            embeddedfunction = self.loadFunctionQueryEmbedding()
+        except:
+            self.makeFunctionQueryEmbedding()
+            embeddedfunction = self.loadFunctionQueryEmbedding()
+
+        textToQuery, apinumber, funcnumber = self.generateSetupText(embeddedquery, embeddedfunction, text)
+        print(textToQuery)
 
         #print(textToQuery)
 
@@ -110,6 +123,7 @@ class ChatBot():
 
         response = response["choices"][0]["text"].lstrip()
         print(response)
+        quit()
 
 
         try:
@@ -174,22 +188,41 @@ class ChatBot():
         df = pd.DataFrame(apitexts, columns=["items"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df.to_csv('embedded_questions.csv', index=False)
+    
 
-    def generateSetupText(self, df, prompt):
+
+    def loadFunctionQueryEmbedding(self):
+        df = pd.read_csv('embedded_functions.csv')
+        df["embedding"] = df.embedding.apply(eval)
+        df["embedding"] = df.embedding.apply(np.array)
+        return df
+    
+    def makeFunctionQueryEmbedding(self):
+        functiontexts = [i.showFunction() for i in self.functions]
+        df = pd.DataFrame(functiontexts, columns=["items"])
+        df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
+        df.to_csv('embedded_functions.csv', index=False)
+
+    def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
         res = df.sort_values('similarities', ascending=False).head(1)
         newres = res.values.flatten().tolist()
         apinum = res.index[0]+1
-        print(newres[-1])
-        if newres[-1] > 0.6:
-            api = newres[0]
-            text = f"Here is an API: {api}.\n\n Reply with this api filled in with \
-the following information: {self.info}\n\n{prompt}. Just provide the link, nothing else. \
-If the api is not suitable for this query, reply with None."
-            return text, apinum
-        else:
-            return self.info + "\n" + JARVIS + "\n" + prompt, None
+        api = newres[0]
+
+        embedding = get_embedding(prompt, model='text-embedding-ada-002')
+        df1['similarities'] = df1.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        res = df1.sort_values('similarities', ascending=False).head(1)
+        newres = res.values.flatten().tolist()
+        funcnum = res.index[0]+1
+        func = newres[0]
+
+
+        text = f"Here is an API: {api}.\n\nHere is a function: {func}\n\nHere is some information: {self.info}\n\nHere is a request: {prompt}\n\n \
+If the request is better suited to the function, reply with the function filled in with the request, otherwise if the API \
+is better suited, reply with the API filled in. The function is in python."
+        return text, apinum, funcnum
 
 
     def getMostUsefulParagraph(self, paragraphlist, valuepairs, prompt):
@@ -379,7 +412,7 @@ def jsonDataClean(data):
     return text
     
 
-def explode(suit):
+def explode(suit_number):
     pass
 
         
@@ -395,8 +428,8 @@ APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["Wea
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
 APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
-FunctionExplode = Function(explode, args=["suit"])
-chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation])
+FunctionExplode = Function(explode, args=["suit"], typeannots = {"suit": "int"})
+chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], [FunctionExplode])
 
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
 #print(chatbot.query("How many answers are on stack overflow question 75221583?"))
