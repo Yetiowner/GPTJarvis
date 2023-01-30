@@ -14,6 +14,8 @@ from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
 import json
+from test import explode, build
+import inspect
 
 with open("usage.log", "a") as file:
     file.write("--------------------\n")
@@ -59,15 +61,19 @@ class API():
         return f"API {self.number}: {self.link}"
 
 class Function():
-    def __init__(self, function, args=[], kwargs={}, typeannots={}):
+    def __init__(self, function, args=[], kwargs={}, typeannots={}, description=None):
         self.function = function
         self.args = args
         self.kwargs = kwargs
         self.typeannots = typeannots
+        self.description = description
         self.number = 0
     
     def showFunction(self):
-        return f"{self.function.__name__}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}"
+        return f"{self.function.__name__}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}{' Description: ' + self.description if self.description else ''}"
+    
+    def __repr__(self):
+        return f"Func {self.number}: {self.function.__name__}"
 
 class ChatBot():
     def __init__(self, apis: List[API] = [], functions: List[Function] = []):
@@ -83,7 +89,7 @@ class ChatBot():
         out = ""
         with open("aditionalInfo.txt", "r") as file:
             out += file.read() + "\n"
-        out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
+        #out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
         out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
     
@@ -122,13 +128,52 @@ class ChatBot():
 
 
         response = response["choices"][0]["text"].lstrip()
-        print(response)
-        quit()
+        choice = response[0]
+        restofresponse = response[1:].lstrip()
 
 
-        try:
+        if choice == "A":
             link = re.findall('https?://[^\s]+', response)[0]
-        except IndexError:
+
+            print(link)
+
+            api = self.getAPIFromNumber(apinumber)
+            
+            try:
+                data = self.getDataFromLink(link, api, text)
+            except Exception as e:
+                print(apinumber)
+                print(response)
+                print(link)
+                raise e
+            
+            
+            textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
+            
+            print(textToAnalyse)
+
+            newresponse = openai.Completion.create(
+            engine=MODEL,
+            prompt=textToAnalyse,
+            temperature=0.5,
+            max_tokens=1024,
+            top_p=1.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.6
+            )
+            logUsage(newresponse)
+
+            #print(newresponse)
+
+            response = newresponse["choices"][0]["text"].lstrip()
+
+        elif choice == "F":
+            chosenfunction = self.getFuncFromNumber(funcnumber)
+            chosenfunctiontorun = restofresponse
+            funcglobals = inspect.getmodule(chosenfunction.function).__dict__
+            exec(chosenfunctiontorun, funcglobals)
+
+        elif choice == "N":
             print(self.info + "\n" + text + "\n" + JARVIS)
             response = openai.Completion.create(
             engine=MODEL,
@@ -141,41 +186,9 @@ class ChatBot():
             )
             logUsage(response)
             response = response["choices"][0]["text"].lstrip()
-            return response
-
-        print(link)
-
-        api = self.getAPIFromNumber(apinumber)
         
-        try:
-            data = self.getDataFromLink(link, api, text)
-        except Exception as e:
-            print(apinumber)
-            print(response)
-            print(link)
-            raise e
-        
-        
-        textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
-        
-        print(textToAnalyse)
-
-        newresponse = openai.Completion.create(
-        engine=MODEL,
-        prompt=textToAnalyse,
-        temperature=0.5,
-        max_tokens=1024,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.6
-        )
-        logUsage(newresponse)
-
-        #print(newresponse)
-
-        newresponse = newresponse["choices"][0]["text"].lstrip()
         print("----------------------------")
-        return newresponse
+        return response
     
     def loadAPIQueryEmbedding(self):
         df = pd.read_csv('embedded_questions.csv')
@@ -210,6 +223,7 @@ class ChatBot():
         newres = res.values.flatten().tolist()
         apinum = res.index[0]+1
         api = newres[0]
+        print(newres[-1])
 
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
         df1['similarities'] = df1.embedding.apply(lambda x: cosine_similarity(x, embedding))
@@ -217,11 +231,12 @@ class ChatBot():
         newres = res.values.flatten().tolist()
         funcnum = res.index[0]+1
         func = newres[0]
+        print(newres[-1])
 
 
-        text = f"Here is an API: {api}.\n\nHere is a function: {func}\n\nHere is some information: {self.info}\n\nHere is a request: {prompt}\n\n \
-If the request is better suited to the function, reply with the function filled in with the request, otherwise if the API \
-is better suited, reply with the API filled in. The function is in python."
+        text = f"Here is an API: {api}.\n\nHere is a function: {func}\n\nHere is some information: {self.info}\n\nHere is a request: {prompt}\n\n\
+If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the API \
+is better suited to the query, reply with an A, followed by the API filled in on the next line. Choose only one of these.\n"
         return text, apinum, funcnum
 
 
@@ -274,6 +289,12 @@ is better suited, reply with the API filled in. The function is in python."
         for api in self.apis:
             if api.number == number:
                 return api
+
+
+    def getFuncFromNumber(self, number):
+        for func in self.functions:
+            if func.number == number:
+                return func
 
     def getApiNumberFromString(self, string: str):
         out = ""
@@ -412,8 +433,6 @@ def jsonDataClean(data):
     return text
     
 
-def explode(suit_number):
-    pass
 
         
 apikey = None
@@ -428,8 +447,9 @@ APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["Wea
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
 APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
-FunctionExplode = Function(explode, args=["suit"], typeannots = {"suit": "int"})
-chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], [FunctionExplode])
+FunctionExplode = Function(explode, args=["suit"], typeannots = {"suit": "int"}, description = "Use this function to initate self destruct on the suit given, and make it explode. @Param suit: integer number of the suit.")
+FunctionBuild = Function(build, args=["suit"], typeannots = {"suit": "int"}, description = "Use this function to initate the creation of the suit given. @Param suit: integer number of the suit.")
+chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], [FunctionExplode, FunctionBuild])
 
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
 #print(chatbot.query("How many answers are on stack overflow question 75221583?"))
@@ -452,4 +472,5 @@ chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWea
 #print(chatbot.query("What is my name?"))
 #print(chatbot.query("What is your name? Also, what is my name?"))
 # Programming test
+print(chatbot.query("Jarvis, do me a favour and build mark 42"))
 print(chatbot.query("Jarvis, do me a favour and blow mark 42"))
