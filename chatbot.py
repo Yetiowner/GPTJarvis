@@ -14,7 +14,6 @@ from openai.embeddings_utils import cosine_similarity
 import pandas as pd
 import numpy as np
 import json
-from test import explode, build
 import inspect
 
 with open("usage.log", "a") as file:
@@ -89,7 +88,7 @@ class ChatBot():
         out = ""
         with open("aditionalInfo.txt", "r") as file:
             out += file.read() + "\n"
-        #out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
+        out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
         out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
     
@@ -434,10 +433,6 @@ def jsonDataClean(data):
     
 
 
-        
-apikey = None
-loadApiKeyFromFile("secret.txt") # TODO delete when publish
-
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)
 #APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
@@ -447,30 +442,3 @@ APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["Wea
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
 APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
-FunctionExplode = Function(explode, args=["suit"], typeannots = {"suit": "int"}, description = "Use this function to initate self destruct on the suit given, and make it explode. @Param suit: integer number of the suit.")
-FunctionBuild = Function(build, args=["suit"], typeannots = {"suit": "int"}, description = "Use this function to initate the creation of the suit given. @Param suit: integer number of the suit.")
-chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], [FunctionExplode, FunctionBuild])
-
-#print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
-#print(chatbot.query("How many answers are on stack overflow question 75221583?"))
-#print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
-#print(chatbot.query("Give me the etymology of water using the wikipedia article for water."))
-#print(chatbot.query("Is it the evening right now?"))
-#print(chatbot.query("What is x if (e^(x^2))/x=5+x?"))
-#print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
-#print(chatbot.query("What is en passant?"))
-#print(chatbot.query("What is the weather today? I live at 30, 30."))
-#print(chatbot.query("Tell me a story."))
-#print(chatbot.query("How many dogecoin is a dollar worth right now?"))
-#print(chatbot.query("What is my IP address?"))
-#print(chatbot.query("Where am I?")) # TODO fix
-#print(chatbot.query("How many people live in the US right now according to google?"))
-#print(chatbot.query("How many people have covid right now? Use google."))
-#print(chatbot.query("Translate the entire rick roll lyrics into french"))
-#print(chatbot.query("How does the queen move? Check from wikipedia"))
-# Information test
-#print(chatbot.query("What is my name?"))
-#print(chatbot.query("What is your name? Also, what is my name?"))
-# Programming test
-print(chatbot.query("Jarvis, do me a favour and build mark 42"))
-print(chatbot.query("Jarvis, do me a favour and blow mark 42"))
