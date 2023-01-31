@@ -1,1 +1,1 @@
-from Jarvis import *
+from GPTJarvis.src.Jarvis import *

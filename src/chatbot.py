@@ -3,7 +3,7 @@ from typing import Union, Optional, Callable, List
 import types
 import openai
 import requests
-import extracttxt as extracttxt
+import GPTJarvis.src.extracttxt as extracttxt
 import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions

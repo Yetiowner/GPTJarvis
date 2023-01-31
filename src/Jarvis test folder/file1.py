@@ -1,4 +1,4 @@
-import Jarvis
+import GPTJarvis.src.Jarvis as Jarvis
 
 val = 0
 
@@ -14,4 +14,5 @@ def build(suit_number):
     print(f"Created suit number {suit_number}!")
     print(val)
 
-print("asdfasdf")
+while True:
+    Jarvis.update()
