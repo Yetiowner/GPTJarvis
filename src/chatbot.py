@@ -3,7 +3,7 @@ from typing import Union, Optional, Callable, List
 import types
 import openai
 import requests
-import extracttxt
+import extracttxt as extracttxt
 import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -88,8 +88,8 @@ class ChatBot():
         out = ""
         with open("aditionalInfo.txt", "r") as file:
             out += file.read() + "\n"
-        out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
-        out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
+        #out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
+        #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
     
     def query(self, text):
@@ -442,3 +442,27 @@ APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["Wea
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
 APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
+
+#print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
+#print(chatbot.query("How many answers are on stack overflow question 75221583?"))
+#print(chatbot.query("What is the latest post from Rick Roals on quora? Quote him in full, and give me the link to the post."))
+#print(chatbot.query("Give me the etymology of water using the wikipedia article for water."))
+#print(chatbot.query("Is it the evening right now?"))
+#print(chatbot.query("What is x if (e^(x^2))/x=5+x?"))
+#print(chatbot.query("What is d/dx if f(x) = (e^(x^2))/x?"))
+#print(chatbot.query("What is en passant?"))
+#print(chatbot.query("What is the weather today? I live at 30, 30."))
+#print(chatbot.query("Tell me a story."))
+#print(chatbot.query("How many dogecoin is a dollar worth right now?"))
+#print(chatbot.query("What is my IP address?"))
+#print(chatbot.query("Where am I?")) # TODO fix
+#print(chatbot.query("How many people live in the US right now according to google?"))
+#print(chatbot.query("How many people have covid right now? Use google."))
+#print(chatbot.query("Translate the entire rick roll lyrics into french"))
+#print(chatbot.query("How does the queen move? Check from wikipedia"))
+# Information test
+#print(chatbot.query("What is my name?"))
+#print(chatbot.query("What is your name? Also, what is my name?"))
+# Programming test
+#print(Jarvis.query("Jarvis, build the mark 42"))
+#print(Jarvis.query("Jarvis, do me a favour and blow mark 42"))
