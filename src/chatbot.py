@@ -20,15 +20,6 @@ with open("usage.log", "a") as file:
     file.write("--------------------\n")
 
 
-options = FirefoxOptions()
-options.add_argument("--headless")
-options.preferences["permissions.default.geo"] = 1
-options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
-browser = webdriver.Firefox(options=options)
-
-with open("keys.json", "r") as file:
-    APIKEYS = json.load(file)
-
 MODEL = "text-davinci-003"
 JARVIS = "\nYou are Jarvis from Iron Man, so answer like him. Call me Sir. If I ask a question I should know the answer to, \
 be slightly sarcastic in your response."
@@ -60,7 +51,7 @@ class API():
         return f"API {self.number}: {self.link}"
 
 class Function():
-    def __init__(self, function, args=[], kwargs={}, typeannots={}, description=None):
+    def __init__(self, function: str, args=[], kwargs={}, typeannots={}, description=None):
         self.function = function
         self.args = args
         self.kwargs = kwargs
@@ -69,10 +60,10 @@ class Function():
         self.number = 0
     
     def showFunction(self):
-        return f"{self.function.__name__}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}{' Description: ' + self.description if self.description else ''}"
+        return f"{self.function}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}{' Description: ' + self.description if self.description else ''}"
     
     def __repr__(self):
-        return f"Func {self.number}: {self.function.__name__}"
+        return f"Func {self.number}: {self.function}"
 
 class ChatBot():
     def __init__(self, apis: List[API] = [], functions: List[Function] = []):
@@ -169,8 +160,9 @@ class ChatBot():
         elif choice == "F":
             chosenfunction = self.getFuncFromNumber(funcnumber)
             chosenfunctiontorun = restofresponse
-            funcglobals = inspect.getmodule(chosenfunction.function).__dict__
-            exec(chosenfunctiontorun, funcglobals)
+            response = [chosenfunction, chosenfunctiontorun]
+            """funcglobals = inspect.getmodule(chosenfunction.function).__dict__
+            exec(chosenfunctiontorun, funcglobals)"""
 
         elif choice == "N":
             print(self.info + "\n" + text + "\n" + JARVIS)
@@ -431,7 +423,16 @@ def jsonDataClean(data):
     text = text.replace("'", "")
     return text
     
+def init_browser():
+    global browser
+    options = FirefoxOptions()
+    options.add_argument("--headless")
+    options.preferences["permissions.default.geo"] = 1
+    options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
+    browser = webdriver.Firefox(options=options)
 
+with open("keys.json", "r") as file:
+    APIKEYS = json.load(file)
 
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)

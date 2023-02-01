@@ -14,5 +14,16 @@ def build(suit_number):
     print(f"Created suit number {suit_number}!")
     print(val)
 
+@Jarvis.readable
+def getTemperature(suit_number):
+    """Returns the temperature at the given suit. @param suit_number: int representing suit number"""
+    return 3*suit_number
+
+def foo(a):
+    """Bar"""
+    return "baz"
+
+
+
 while True:
     Jarvis.update()
