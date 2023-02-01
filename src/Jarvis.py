@@ -30,6 +30,36 @@ def readable(func):
   return wrapper
 
 def update():
+  pass
+  
+
+def init_main(scope="folder"):
+  #init_browser()
+  if scope == "folder":
+    frame = inspect.stack()[1]
+    module = inspect.getmodule(frame[0])
+    filename = module.__file__
+    dirname = os.path.dirname(filename)
+    onlyfiles = [dirname + ("\\" if "\\" in filename else "/") + f for f in listdir(dirname) if isfile(join(dirname, f)) and os.path.splitext(f)[1] == ".py"]
+    onlyfiles.remove(filename)
+    accessablefiles = onlyfiles
+  else:
+    accessablefiles = scope
+  print(accessablefiles)
+  processes = []
+  for file in accessablefiles:
+    processes.append(subprocess.Popen([sys.executable, file], stdin=PIPE, stdout=PIPE))
+  
+  #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
+  print("asdf")
+  while True:
+    print("asdf1")
+    for p in processes:
+      print("asdf2")
+      print(p.stdout.readline()), # read output
+
+def init():
+  print("asdf")
   frame = inspect.stack()[1]
   module = inspect.getmodule(frame[0])
   diagnostics = []
@@ -44,29 +74,6 @@ def update():
       readables.append(item)
   print(runnables)
   print(readables)
-  
-
-def init(scope="folder"):
-  #init_browser()
-  if scope == "folder":
-    frame = inspect.stack()[1]
-    module = inspect.getmodule(frame[0])
-    filename = module.__file__
-    dirname = os.path.dirname(filename)
-    onlyfiles = [dirname + "\\" + f for f in listdir(dirname) if isfile(join(dirname, f)) and os.path.splitext(f)[1] == ".py"]
-    onlyfiles.remove(filename)
-    accessablefiles = onlyfiles
-  else:
-    accessablefiles = scope
-  print(accessablefiles)
-  processes = []
-  for file in accessablefiles:
-    processes.append(subprocess.Popen([sys.executable, file], stdin=PIPE, stdout=PIPE))
-  
-  #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
-  while True:
-    for p in processes:
-      print(p.stdout.readline()), # read output
 
 
   

@@ -1,2 +1,2 @@
 from GPTJarvis.src import Jarvis
-Jarvis.init(scope="folder")
+Jarvis.init_main(scope="folder")  

@@ -1,6 +1,7 @@
 import GPTJarvis.src.Jarvis as Jarvis
 
 val = 0
+print("fdsa")
 
 @Jarvis.runnable
 def explode(suit_number):
@@ -23,7 +24,7 @@ def foo(a):
     """Bar"""
     return "baz"
 
-
-
+print("fdsafdsa")
+Jarvis.init()
 while True:
     Jarvis.update()
