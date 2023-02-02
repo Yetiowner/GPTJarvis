@@ -52,14 +52,19 @@ def init_main(scope="folder"):
   
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
   print("asdf")
-  while True:
-    print("asdf1")
-    for p in processes:
-      print("asdf2")
-      print(p.stdout.readline()), # read output
+  print("asdf1")
+  for p in processes:
+    print("asdf2")
+    p.stdin.write(b"f")
+    runnables = p.stdout.readline()
+    #readables = p.stdout.readline()
+    print(runnables)
+    print(readables)
 
 def init():
-  print("asdf")
+  x = input() # wait for confirmation
+  with open("filetext.txt", "w") as file:
+    file.write("got this far")
   frame = inspect.stack()[1]
   module = inspect.getmodule(frame[0])
   diagnostics = []
@@ -72,6 +77,8 @@ def init():
       runnables.append(item)
     if getattr(item, "readable", False):
       readables.append(item)
+  with open("filetext.txt", "w") as file:
+    file.write(str(x))
   print(runnables)
   print(readables)
 
