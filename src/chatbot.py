@@ -1,3 +1,4 @@
+import time
 import os
 from typing import Union, Optional, Callable, List
 import types
@@ -5,9 +6,6 @@ import openai
 import requests
 import GPTJarvis.src.extracttxt as extracttxt
 import re
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
 import time
 from bs4 import BeautifulSoup
 from openai.embeddings_utils import cosine_similarity
@@ -425,14 +423,19 @@ def jsonDataClean(data):
     
 def init_browser():
     global browser
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options as ChromeOptions
+    from selenium.webdriver.firefox.options import Options as FirefoxOptions
     options = FirefoxOptions()
     options.add_argument("--headless")
     options.preferences["permissions.default.geo"] = 1
     options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
     browser = webdriver.Firefox(options=options)
 
+
 with open("keys.json", "r") as file:
     APIKEYS = json.load(file)
+
 
 APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)

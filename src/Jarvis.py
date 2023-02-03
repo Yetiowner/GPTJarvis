@@ -1,4 +1,3 @@
-from GPTJarvis.src.chatbot import *
 from typing import get_type_hints
 import inspect
 import os
@@ -8,9 +7,8 @@ import subprocess
 from subprocess import PIPE
 import sys
 import time
+import types
 
-apikey = None
-loadApiKeyFromFile("secret.txt") # TODO delete when publish
 
 functionlist = []
 
@@ -20,6 +18,7 @@ def runnable(func):
     func(*args, **kwargs)
   
   wrapper.runnable = True
+  wrapper.func = func
   return wrapper
 
 def readable(func):
@@ -27,6 +26,7 @@ def readable(func):
     func(*args, **kwargs)
   
   wrapper.readable = True
+  wrapper.func = func
   return wrapper
 
 def update():
@@ -34,6 +34,9 @@ def update():
   
 
 def init_main(scope="folder"):
+  from GPTJarvis.src.chatbot import ChatBot, loadApiKeyFromFile
+  apikey = None
+  loadApiKeyFromFile("secret.txt") # TODO delete when publish
   #init_browser()
   if scope == "folder":
     frame = inspect.stack()[1]
@@ -51,21 +54,23 @@ def init_main(scope="folder"):
     processes.append(subprocess.Popen([sys.executable, file], stdin=PIPE, stdout=PIPE))
   
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
-  print("asdf")
-  print("asdf1")
-  time.sleep(1)
+  allvariables = []
   for p in processes:
-    print("asdf2")
-    p.stdin.write(b"f\n")
-    print("asdf3")
-    time.sleep(2)
-    p.stdin.flush()
-    runnables = p.stdout.readline()
-    print(runnables)
+    processvariables = []
+    expectedcount = 2
+    for i in iter(p.stdout.readline, ""):
+      if i:
+        expectedcount -= 1
+        processvariables.append(eval(i.decode(encoding="utf8").strip()))
+        if expectedcount == 0:
+          break
+    allvariables.append(processvariables)
+  
+  print(allvariables)
     #print(readables)
 
 def init():
-  x = input() # wait for confirmation
+  #x = input() # wait for confirmation
   with open("filetext.txt", "w") as file:
     file.write("got this far")
   frame = inspect.stack()[1]
@@ -81,9 +86,16 @@ def init():
     if getattr(item, "readable", False):
       readables.append(item)
   with open("filetext.txt", "w") as file:
-    file.write(str(x)+"dsa")
-  print(runnables)
-  #print(readables)
+    file.write("dsa")
 
 
+  displayFunctions(runnables)
+  displayFunctions(readables)
+
+def displayFunctions(functions):
+  out = []
+  for function in functions:
+    func = function.func
+    out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__])
+  print(out)
   
