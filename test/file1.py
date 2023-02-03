@@ -25,5 +25,5 @@ def foo(a):
     return "baz"
 
 Jarvis.init()
-"""while True:
-    Jarvis.update()"""
+while True:
+    Jarvis.update()

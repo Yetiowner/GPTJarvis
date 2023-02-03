@@ -34,7 +34,7 @@ def update():
   
 
 def init_main(scope="folder"):
-  from GPTJarvis.src.chatbot import ChatBot, loadApiKeyFromFile
+  from GPTJarvis.src.chatbot import ChatBot, loadApiKeyFromFile, Function
   apikey = None
   loadApiKeyFromFile("secret.txt") # TODO delete when publish
   #init_browser()
@@ -51,7 +51,7 @@ def init_main(scope="folder"):
   print(accessablefiles)
   processes = []
   for file in accessablefiles:
-    processes.append(subprocess.Popen([sys.executable, file], stdin=PIPE, stdout=PIPE))
+    processes.append(subprocess.Popen([sys.executable, file], stdin=PIPE, stdout=PIPE, universal_newlines=True))
   
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
   allvariables = []
@@ -61,7 +61,8 @@ def init_main(scope="folder"):
     for i in iter(p.stdout.readline, ""):
       if i:
         expectedcount -= 1
-        processvariables.append(eval(i.decode(encoding="utf8").strip()))
+        evalled = eval(i)
+        processvariables.append([Function(*evalledfunc) for evalledfunc in evalled])
         if expectedcount == 0:
           break
     allvariables.append(processvariables)
@@ -98,4 +99,6 @@ def displayFunctions(functions):
     func = function.func
     out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__])
   print(out)
+  sys.stdout.flush()
+  
   
