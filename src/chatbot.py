@@ -64,13 +64,13 @@ class Function():
         return f"Func {self.number}: {self.function}"
 
 class ChatBot():
-    def __init__(self, apis: List[API] = [], functions: List[Function] = []):
-        self.apis = apis
+    def __init__(self, functions: List[Function] = [], readables: List[Function] = []):
         self.functions = functions
-        for index, api in enumerate(self.apis):
-            api.number = index + 1
+        self.readables = readables
         for index, function in enumerate(self.functions):
             function.number = index + 1
+        for index, readable in enumerate(self.readables):
+            readable.number = index + 1
         self.info = self.genInfoText()
     
     def genInfoText(self):
@@ -85,10 +85,10 @@ class ChatBot():
         print("----------------------------")
         openai.api_key = apikey
         try:
-            embeddedquery = self.loadAPIQueryEmbedding()
+            embeddedread = self.loadReadableQueryEmbedding()
         except:
-            self.makeAPIQueryEmbedding()
-            embeddedquery = self.loadAPIQueryEmbedding()
+            self.makeReadableQueryEmbedding()
+            embeddedread = self.loadReadableQueryEmbedding()
 
         try:
             embeddedfunction = self.loadFunctionQueryEmbedding()
@@ -96,7 +96,7 @@ class ChatBot():
             self.makeFunctionQueryEmbedding()
             embeddedfunction = self.loadFunctionQueryEmbedding()
 
-        textToQuery, apinumber, funcnumber = self.generateSetupText(embeddedquery, embeddedfunction, text)
+        textToQuery, readnumber, funcnumber = self.generateSetupText(embeddedread, embeddedfunction, text)
         print(textToQuery)
 
         #print(textToQuery)
@@ -120,47 +120,15 @@ class ChatBot():
         restofresponse = response[1:].lstrip()
 
 
-        if choice == "A":
-            link = re.findall('https?://[^\s]+', response)[0]
-
-            print(link)
-
-            api = self.getAPIFromNumber(apinumber)
-            
-            try:
-                data = self.getDataFromLink(link, api, text)
-            except Exception as e:
-                print(apinumber)
-                print(response)
-                print(link)
-                raise e
-            
-            
-            textToAnalyse = self.generateAnalysisText(data) + "\n\n" + text
-            
-            print(textToAnalyse)
-
-            newresponse = openai.Completion.create(
-            engine=MODEL,
-            prompt=textToAnalyse,
-            temperature=0.5,
-            max_tokens=1024,
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.6
-            )
-            logUsage(newresponse)
-
-            #print(newresponse)
-
-            response = newresponse["choices"][0]["text"].lstrip()
+        if choice == "R":
+            chosenread = self.getReadFromNumber(readnumber)
+            chosenreadtorun = restofresponse
+            response = [chosenread, chosenreadtorun]
 
         elif choice == "F":
             chosenfunction = self.getFuncFromNumber(funcnumber)
             chosenfunctiontorun = restofresponse
             response = [chosenfunction, chosenfunctiontorun]
-            """funcglobals = inspect.getmodule(chosenfunction.function).__dict__
-            exec(chosenfunctiontorun, funcglobals)"""
 
         elif choice == "N":
             print(self.info + "\n" + text + "\n" + JARVIS)
@@ -179,17 +147,17 @@ class ChatBot():
         print("----------------------------")
         return response
     
-    def loadAPIQueryEmbedding(self):
-        df = pd.read_csv('embedded_questions.csv')
+    def loadReadableQueryEmbedding(self):
+        df = pd.read_csv('embedded_reads.csv')
         df["embedding"] = df.embedding.apply(eval)
         df["embedding"] = df.embedding.apply(np.array)
         return df
     
-    def makeAPIQueryEmbedding(self):
-        apitexts = [i.showApiLink() for i in self.apis]
+    def makeReadableQueryEmbedding(self):
+        apitexts = [i.showFunction() for i in self.readables]
         df = pd.DataFrame(apitexts, columns=["items"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
-        df.to_csv('embedded_questions.csv', index=False)
+        df.to_csv('embedded_reads.csv', index=False)
     
 
 
@@ -223,9 +191,9 @@ class ChatBot():
         print(newres[-1])
 
 
-        text = f"Here is an API: {api}.\n\nHere is a function: {func}\n\nHere is some information: {self.info}\n\nHere is a request: {prompt}\n\n\
-If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the API \
-is better suited to the query, reply with an A, followed by the API filled in on the next line. Choose only one of these.\n"
+        text = f"Here is an accessor: {api}.\n\nHere is a function that can perform an action: {func}\n\nHere is some information: {self.info}\n\nHere is a request: {prompt}\n\n\
+If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the accessor \
+is better suited to the query, reply with an R, followed by the function filled in on the next line. Choose only one of these.\n"
         return text, apinum, funcnum
 
 
@@ -274,10 +242,10 @@ is better suited to the query, reply with an A, followed by the API filled in on
         return content
 
 
-    def getAPIFromNumber(self, number):
-        for api in self.apis:
-            if api.number == number:
-                return api
+    def getReadFromNumber(self, number):
+        for read in self.readables:
+            if read.number == number:
+                return read
 
 
     def getFuncFromNumber(self, number):

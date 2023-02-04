@@ -7,10 +7,14 @@ import subprocess
 from subprocess import PIPE
 import sys
 import time
+import threading
 import types
+from contextlib import redirect_stdout
+import shutil
 
 
 functionlist = []
+opqueue = []
 
 
 def runnable(func):
@@ -30,13 +34,27 @@ def readable(func):
   return wrapper
 
 def update():
-  pass
+  global opqueue
+  if opqueue != []:
+    op = opqueue.pop()
+    frame = inspect.stack()[1]
+    module = inspect.getmodule(frame[0])
+    attrs = module.__dict__
+    filename = f"streamedFileOutput/{os.path.basename(module.__file__)}.txt"
+
+    with open(filename, "a") as file:
+      with redirect_stdout(file):
+        exec(op, attrs)
   
 
 def init_main(scope="folder"):
-  from GPTJarvis.src.chatbot import ChatBot, loadApiKeyFromFile, Function
-  apikey = None
-  loadApiKeyFromFile("secret.txt") # TODO delete when publish
+  from GPTJarvis.src import chatbot
+  
+  chatbot.loadApiKeyFromFile("secret.txt") # TODO delete when publish
+
+  shutil.rmtree("streamedFileOutput")
+  os.mkdir("streamedFileOutput")
+
   #init_browser()
   if scope == "folder":
     frame = inspect.stack()[1]
@@ -55,6 +73,7 @@ def init_main(scope="folder"):
   
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
   allvariables = []
+  functon_process_relationship = []
   for p in processes:
     processvariables = []
     expectedcount = 2
@@ -62,18 +81,85 @@ def init_main(scope="folder"):
       if i:
         expectedcount -= 1
         evalled = eval(i)
-        processvariables.append([Function(*evalledfunc) for evalledfunc in evalled])
+        funced = [chatbot.Function(*evalledfunc) for evalledfunc in evalled]
+        for func in funced:
+          functon_process_relationship.append([func, p])
+        processvariables.append(funced)
         if expectedcount == 0:
           break
     allvariables.append(processvariables)
   
-  print(allvariables)
-    #print(readables)
+  functions = []
+  readables = []
+  for modulefuncs in allvariables:
+    modulefunctions = modulefuncs[0]
+    modulereadables = modulefuncs[1]
+    for i in modulefunctions:
+      functions.append(i)
+    for i in modulereadables:
+      readables.append(i)
+  
+  chosenchatbot = chatbot.ChatBot(functions, readables)
+  chatbot.init_browser()
+
+  startStreamingOutput()
+
+  runProcessMainloop(chosenchatbot, functon_process_relationship, processes)
+  
+
+def startStreamingOutput():
+  thread = threading.Thread(target=streamOutput)
+  thread.start()
+
+def streamOutput():
+  lastfilename = None
+  mypath = "streamedFileOutput"
+  linereached = {}
+  while True:
+    onlyfiles = ["streamedFileOutput" + "/" + f for f in listdir(mypath) if isfile(join(mypath, f))]
+    for file in onlyfiles:
+      with open(file, "r+") as openedfile:
+        readlines = openedfile.readlines()
+        if file not in linereached:
+          linereached[file] = 0
+        for index in range(linereached[file], len(readlines)):
+          if file != lastfilename:
+            filenametodisplay = os.path.splitext(os.path.basename(file))[0]
+            print(f"{filenametodisplay}: ")
+          lastfilename = file
+          linereached[file] += 1
+          line = readlines[index].strip()
+          print(line)
+
+def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
+  createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
+  #createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)
+  createQuery("what is the weather?", chosenchatbot, functon_process_relationship, processes)
+  
+  
+def createQuery(string, chosenchatbot, functon_process_relationship, processes):
+  result = chosenchatbot.query(string)
+  for function in functon_process_relationship:
+    if function[0] == result[0]:
+      chosenprocess = function[1]
+  
+  thingtorun = result[1]
+
+  chosenprocess.stdin.write(thingtorun)
+  #print(chosenprocess)
+  #print(thingtorun)
+
+def listenForRunCommand():
+  global opqueue
+  while True:
+    try:
+      x = input()
+      opqueue.append(x)
+    except EOFError:
+      pass
 
 def init():
   #x = input() # wait for confirmation
-  with open("filetext.txt", "w") as file:
-    file.write("got this far")
   frame = inspect.stack()[1]
   module = inspect.getmodule(frame[0])
   diagnostics = []
@@ -86,12 +172,13 @@ def init():
       runnables.append(item)
     if getattr(item, "readable", False):
       readables.append(item)
-  with open("filetext.txt", "w") as file:
-    file.write("dsa")
 
 
   displayFunctions(runnables)
   displayFunctions(readables)
+  
+  thread = threading.Thread(target=listenForRunCommand)
+  thread.start()
 
 def displayFunctions(functions):
   out = []

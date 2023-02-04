@@ -6,7 +6,7 @@ geckodriver.exe
 usage.log
 out.txt
 keys.json
-embedded_questions.csv
-embedded_functions.csv
+*.csv
 aditionalInfo.txt
 filetext.txt
+streamedFileOutput/
