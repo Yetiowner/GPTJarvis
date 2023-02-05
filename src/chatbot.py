@@ -56,6 +56,7 @@ class Function():
         self.typeannots = typeannots
         self.description = description
         self.number = 0
+        self.mode = None
     
     def showFunction(self):
         return f"{self.function}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}{' Description: ' + self.description if self.description else ''}"
@@ -69,8 +70,10 @@ class ChatBot():
         self.readables = readables
         for index, function in enumerate(self.functions):
             function.number = index + 1
+            function.mode = "F"
         for index, readable in enumerate(self.readables):
             readable.number = index + 1
+            readable.mode = "R"
         self.info = self.genInfoText()
     
     def genInfoText(self):

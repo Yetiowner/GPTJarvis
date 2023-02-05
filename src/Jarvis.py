@@ -19,7 +19,7 @@ opqueue = []
 
 def runnable(func):
   def wrapper(*args, **kwargs):
-    func(*args, **kwargs)
+    return func(*args, **kwargs)
   
   wrapper.runnable = True
   wrapper.func = func
@@ -27,7 +27,7 @@ def runnable(func):
 
 def readable(func):
   def wrapper(*args, **kwargs):
-    func(*args, **kwargs)
+    return func(*args, **kwargs)
   
   wrapper.readable = True
   wrapper.func = func
@@ -35,6 +35,7 @@ def readable(func):
 
 def update():
   global opqueue
+  #print(opqueue)
   if opqueue != []:
     op = opqueue.pop()
     frame = inspect.stack()[1]
@@ -44,7 +45,10 @@ def update():
 
     with open(filename, "a") as file:
       with redirect_stdout(file):
-        exec(op, attrs)
+        result = eval(op, attrs)
+    #while True:
+    print(result)
+    sys.stdout.flush()
   
 
 def init_main(scope="folder"):
@@ -81,7 +85,9 @@ def init_main(scope="folder"):
       if i:
         expectedcount -= 1
         evalled = eval(i)
-        funced = [chatbot.Function(*evalledfunc) for evalledfunc in evalled]
+        funced = []
+        for evalledfunc in evalled:
+          funced.append(chatbot.Function(*evalledfunc))
         for func in funced:
           functon_process_relationship.append([func, p])
         processvariables.append(funced)
@@ -131,10 +137,15 @@ def streamOutput():
           line = readlines[index].strip()
           print(line)
 
+def awaitQueryFinish():
+  pass
+
 def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
   createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
-  #createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)
+  createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)
+  createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
   createQuery("what is the weather?", chosenchatbot, functon_process_relationship, processes)
+  createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
 def createQuery(string, chosenchatbot, functon_process_relationship, processes):
@@ -145,9 +156,13 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
   
   thingtorun = result[1]
 
-  chosenprocess.stdin.write(thingtorun)
+  chosenprocess.stdin.write(thingtorun+"\n")
+  chosenprocess.stdin.flush()
+  output = chosenprocess.stdout.readline().strip()
+  print("Output: " + output)
   #print(chosenprocess)
   #print(thingtorun)
+
 
 def listenForRunCommand():
   global opqueue
@@ -155,7 +170,7 @@ def listenForRunCommand():
     try:
       x = input()
       opqueue.append(x)
-    except EOFError:
+    except EOFError as e:
       pass
 
 def init():
