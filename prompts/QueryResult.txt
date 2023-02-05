@@ -1,0 +1,10 @@
+Here is an accessor: {}.
+
+Here is a function that can perform an action: {}
+
+Here is some information: {}
+
+Here is a request: {}
+
+
+If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the accessor is better suited to the query, reply with an R, followed by the function filled in on the next line. Choose only one of these.

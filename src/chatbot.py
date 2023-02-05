@@ -13,14 +13,14 @@ import pandas as pd
 import numpy as np
 import json
 import inspect
+from GPTJarvis.src.utils import loadPrompt
 
 with open("usage.log", "a") as file:
     file.write("--------------------\n")
 
 
 MODEL = "text-davinci-003"
-JARVIS = "\nYou are Jarvis from Iron Man, so answer like him. Call me Sir. If I ask a question I should know the answer to, \
-be slightly sarcastic in your response."
+JARVIS = loadPrompt("JarvisInfo.txt")
 
 class API():
     def __init__(self, link: str, querynames: list = [], querydescriptors: dict = {}, queryform: dict = {}, description: Optional[str] = None, datacleaning: Optional[Callable] = extracttxt.scrapeText, accessDelay = 0):
@@ -193,10 +193,7 @@ class ChatBot():
         func = newres[0]
         print(newres[-1])
 
-
-        text = f"Here is an accessor: {api}.\n\nHere is a function that can perform an action: {func}\n\nHere is some information: {self.info}\n\nHere is a request: {prompt}\n\n\
-If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the accessor \
-is better suited to the query, reply with an R, followed by the function filled in on the next line. Choose only one of these.\n"
+        text = loadPrompt("QueryResult.txt").format(api, func, self.info, prompt)
         return text, apinum, funcnum
 
 
@@ -266,8 +263,7 @@ is better suited to the query, reply with an R, followed by the function filled 
         return int(out)
 
     def generateAnalysisText(self, data):
-        return "Information:\n" + self.info + "\n" + data + "\n\nAnswer the following question using the information \
-I just gave you, not from your own knowledge base." + JARVIS
+        return loadPrompt("Analysis.txt").format(self.info, data, JARVIS)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
