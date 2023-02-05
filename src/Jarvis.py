@@ -11,6 +11,7 @@ import threading
 import types
 from contextlib import redirect_stdout
 import shutil
+import GPTJarvis.src.voicebox as voicebox
 
 
 functionlist = []
@@ -141,11 +142,13 @@ def awaitQueryFinish():
   pass
 
 def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
-  createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
-  createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)
-  createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
-  createQuery("what is the weather?", chosenchatbot, functon_process_relationship, processes)
-  createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
+  """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
+  createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
+  ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
+  voicebox.say(ans)
+  ans1 = createQuery("what is the weather? Also, is it good weather for an ice cream?", chosenchatbot, functon_process_relationship, processes)
+  voicebox.say(ans1)
+  #createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
 def createQuery(string, chosenchatbot, functon_process_relationship, processes):
@@ -159,7 +162,10 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
   chosenprocess.stdin.write(thingtorun+"\n")
   chosenprocess.stdin.flush()
   output = chosenprocess.stdout.readline().strip()
-  print("Output: " + output)
+  if result[0].mode == "R":
+    explainedOutput = f"Result of ({result[0].showFunction()}): \n{output}"
+    textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
+    return textResult
   #print(chosenprocess)
   #print(thingtorun)
 

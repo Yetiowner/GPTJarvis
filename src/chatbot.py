@@ -150,6 +150,22 @@ class ChatBot():
         print("----------------------------")
         return response
     
+    def followThroughInformation(self, information, question):
+        analysis = self.generateAnalysisText(information, question)
+        #print(analysis)
+        response = openai.Completion.create(
+        engine=MODEL,
+        prompt=analysis,
+        temperature=1,
+        max_tokens=1024,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0
+        )
+        logUsage(response)
+        response = response["choices"][0]["text"].lstrip()
+        return response
+    
     def loadReadableQueryEmbedding(self):
         df = pd.read_csv('embedded_reads.csv')
         df["embedding"] = df.embedding.apply(eval)
@@ -262,8 +278,8 @@ class ChatBot():
                 out += i
         return int(out)
 
-    def generateAnalysisText(self, data):
-        return loadPrompt("Analysis.txt").format(self.info, data, JARVIS)
+    def generateAnalysisText(self, data, question):
+        return loadPrompt("Analysis.txt").format(self.info, data, JARVIS, question)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
