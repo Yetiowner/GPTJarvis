@@ -119,6 +119,7 @@ class ChatBot():
 
 
         response = response["choices"][0]["text"].lstrip()
+        print(response)
         choice = response[0]
         restofresponse = response[1:].lstrip()
 
@@ -148,7 +149,7 @@ class ChatBot():
             response = response["choices"][0]["text"].lstrip()
         
         print("----------------------------")
-        return response
+        return choice, response
     
     def followThroughInformation(self, information, question):
         analysis = self.generateAnalysisText(information, question)

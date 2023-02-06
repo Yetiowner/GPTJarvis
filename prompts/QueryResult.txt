@@ -4,7 +4,14 @@ Here is a function that can perform an action: {}
 
 Here is some information: {}
 
-Here is a request: {}
+I am about to give you a request.
 
+If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the accessor is better suited to the query, reply with an R, followed by the function filled in on the next line. Choose only one of these. Otherwise, if none is suited, reply with N followed by your own response to it.
+E.g. What is temperature in london? 
+R getInfo("London")
+E.g. Start up firefox
+F startProgram("Firefox")
+E.g. Tell me a story.
+N There once was a...
 
-If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the accessor is better suited to the query, reply with an R, followed by the function filled in on the next line. Choose only one of these.
+{}

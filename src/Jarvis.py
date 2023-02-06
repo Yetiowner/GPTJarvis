@@ -57,7 +57,10 @@ def init_main(scope="folder"):
   
   chatbot.loadApiKeyFromFile("secret.txt") # TODO delete when publish
 
-  shutil.rmtree("streamedFileOutput")
+  try:
+    shutil.rmtree("streamedFileOutput")
+  except FileNotFoundError:
+    pass
   os.mkdir("streamedFileOutput")
 
   #init_browser()
@@ -125,18 +128,21 @@ def streamOutput():
   while True:
     onlyfiles = ["streamedFileOutput" + "/" + f for f in listdir(mypath) if isfile(join(mypath, f))]
     for file in onlyfiles:
-      with open(file, "r+") as openedfile:
-        readlines = openedfile.readlines()
-        if file not in linereached:
-          linereached[file] = 0
-        for index in range(linereached[file], len(readlines)):
-          if file != lastfilename:
-            filenametodisplay = os.path.splitext(os.path.basename(file))[0]
-            print(f"{filenametodisplay}: ")
-          lastfilename = file
-          linereached[file] += 1
-          line = readlines[index].strip()
-          print(line)
+      try:
+        with open(file, "r+") as openedfile:
+          readlines = openedfile.readlines()
+          if file not in linereached:
+            linereached[file] = 0
+          for index in range(linereached[file], len(readlines)):
+            if file != lastfilename:
+              filenametodisplay = os.path.splitext(os.path.basename(file))[0]
+              print(f"{filenametodisplay}: ")
+            lastfilename = file
+            linereached[file] += 1
+            line = readlines[index].strip()
+            print(line)
+      except PermissionError:
+        pass
 
 def awaitQueryFinish():
   pass
@@ -148,26 +154,31 @@ def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
   voicebox.say(ans)
   ans1 = createQuery("what is the weather? Also, is it good weather for an ice cream?", chosenchatbot, functon_process_relationship, processes)
   voicebox.say(ans1)
+  ans2 = createQuery("who invented the alphabet?", chosenchatbot, functon_process_relationship, processes)
+  voicebox.say(ans2)
   #createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
 def createQuery(string, chosenchatbot, functon_process_relationship, processes):
-  result = chosenchatbot.query(string)
-  for function in functon_process_relationship:
-    if function[0] == result[0]:
-      chosenprocess = function[1]
-  
-  thingtorun = result[1]
+  chosentype, result = chosenchatbot.query(string)
+  if chosentype == "N":
+    voicebox.say(result)
+  else:
+    for function in functon_process_relationship:
+      if function[0] == result[0]:
+        chosenprocess = function[1]
+    
+    thingtorun = result[1]
 
-  chosenprocess.stdin.write(thingtorun+"\n")
-  chosenprocess.stdin.flush()
-  output = chosenprocess.stdout.readline().strip()
-  if result[0].mode == "R":
-    explainedOutput = f"Result of ({result[0].showFunction()}): \n{output}"
-    textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
-    return textResult
-  #print(chosenprocess)
-  #print(thingtorun)
+    chosenprocess.stdin.write(thingtorun+"\n")
+    chosenprocess.stdin.flush()
+    output = chosenprocess.stdout.readline().strip()
+    if result[0].mode == "R":
+      explainedOutput = f"Result of ({result[0].showFunction()}): \n{output}"
+      textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
+      return textResult
+    #print(chosenprocess)
+    #print(thingtorun)
 
 
 def listenForRunCommand():
