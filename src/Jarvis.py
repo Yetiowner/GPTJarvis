@@ -150,19 +150,31 @@ def awaitQueryFinish():
 def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
   """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
   createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
-  ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
-  voicebox.say(ans)
-  ans1 = createQuery("what is the weather? Also, is it good weather for an ice cream?", chosenchatbot, functon_process_relationship, processes)
-  voicebox.say(ans1)
-  ans2 = createQuery("who invented the alphabet?", chosenchatbot, functon_process_relationship, processes)
-  voicebox.say(ans2)
+  #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
+  #voicebox.say(ans)
+  #chosenchatbot.breakConversation()
+  while True:
+    ans1 = createQuery(input("Enter a query: "), chosenchatbot, functon_process_relationship, processes)
+    voicebox.say(ans1)
+  """print("\n\n")
+  ans1_2 = createQuery("Is this suitable for ice cream?", chosenchatbot, functon_process_relationship, processes)
+  voicebox.say(ans1_2)
+  print("\n\n")
+  ans1_3 = createQuery("What was my last question?", chosenchatbot, functon_process_relationship, processes)
+  voicebox.say(ans1_3)
+  chosenchatbot.breakConversation()"""
+  #ans2 = createQuery("who invented the alphabet?", chosenchatbot, functon_process_relationship, processes)
+  #voicebox.say(ans2)
   #createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
 def createQuery(string, chosenchatbot, functon_process_relationship, processes):
   chosentype, result = chosenchatbot.query(string)
+  chosenchatbot.register_addInfo(f"My query: {string}")
   if chosentype == "N":
-    voicebox.say(result)
+    chosenchatbot.register_addInfo(f"Your response: {result}")
+    chosenchatbot.addInfo()
+    return result
   else:
     for function in functon_process_relationship:
       if function[0] == result[0]:
@@ -175,8 +187,13 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
     output = chosenprocess.stdout.readline().strip()
     if result[0].mode == "R":
       explainedOutput = f"Result of ({result[0].showFunction()}): \n{output}"
+      chosenchatbot.register_addInfo(explainedOutput)
       textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
+      chosenchatbot.register_addInfo(f"Your response: {textResult}")
+      chosenchatbot.addInfo()
       return textResult
+    chosenchatbot.addInfo()
+    return "Success!"
     #print(chosenprocess)
     #print(thingtorun)
 

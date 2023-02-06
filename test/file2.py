@@ -10,7 +10,7 @@ def setWeather(weather):
 
 @Jarvis.readable
 def getWeather():
-    """Returns the current weather in celsius"""
+    """Returns the current weather as a string"""
     return "sunny"
 
 def foo(a):

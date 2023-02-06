@@ -13,7 +13,7 @@ def build(suit_number: int):
 
 @Jarvis.readable
 def getTemperature(suit_number: int):
-    """Returns the temperature at the given suit. @param suit_number: int representing suit number"""
+    """Returns the temperature at the given suit. @param suit_number: int representing suit number. Returns suit temperature in celsius"""
     return 3*suit_number
 
 def foo(a):

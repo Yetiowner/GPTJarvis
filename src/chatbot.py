@@ -75,6 +75,7 @@ class ChatBot():
             readable.number = index + 1
             readable.mode = "R"
         self.info = self.genInfoText()
+        self.tempinfo = ""
     
     def genInfoText(self):
         out = ""
@@ -135,6 +136,7 @@ class ChatBot():
             response = [chosenfunction, chosenfunctiontorun]
 
         elif choice == "N":
+            print("=======================")
             print(self.info + "\n" + text + "\n" + JARVIS)
             response = openai.Completion.create(
             engine=MODEL,
@@ -151,9 +153,21 @@ class ChatBot():
         print("----------------------------")
         return choice, response
     
+    def register_addInfo(self, info):
+        self.tempinfo += info + "\n"
+    
+    def addInfo(self):
+        self.info += self.tempinfo
+        self.info += "\n"
+        self.tempinfo = ""
+    
+    def breakConversation(self):
+        self.info = self.genInfoText()
+        self.tempinfo = ""
+    
     def followThroughInformation(self, information, question):
         analysis = self.generateAnalysisText(information, question)
-        #print(analysis)
+        print(analysis+"\n=======================")
         response = openai.Completion.create(
         engine=MODEL,
         prompt=analysis,
