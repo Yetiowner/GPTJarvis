@@ -46,7 +46,10 @@ def update():
 
     with open(filename, "a") as file:
       with redirect_stdout(file):
-        result = eval(op, attrs)
+        try:
+          result = eval(op, attrs)
+        except NameError:
+          result = "Failure!"
     #while True:
     print(result)
     sys.stdout.flush()
@@ -185,6 +188,11 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
     output = chosenprocess.stdout.readline().strip()
+    if output == "Failure!":
+      result = chosenchatbot.followThroughInformation("", string)
+      chosenchatbot.register_addInfo(f"Your response: {result}")
+      chosenchatbot.addInfo()
+      return result
     if result[0].mode == "R":
       explainedOutput = f"Result of ({result[0].showFunction()}): \n{output}"
       chosenchatbot.register_addInfo(explainedOutput)

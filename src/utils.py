@@ -1,7 +1,7 @@
 import pathlib
 
 def loadPrompt(promptname):
-  resolvedpath = str(pathlib.Path().parent.absolute())#.parent.absolute())
+  resolvedpath = str(pathlib.Path().parent.absolute().parent.absolute())
   if "/" in resolvedpath:
     joiner = "/"
   else:

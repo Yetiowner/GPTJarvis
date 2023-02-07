@@ -137,18 +137,7 @@ class ChatBot():
 
         elif choice == "N":
             print("=======================")
-            print(self.info + "\n" + text + "\n" + JARVIS)
-            response = openai.Completion.create(
-            engine=MODEL,
-            prompt=self.info + "\n" + JARVIS + "\n" + text,
-            temperature=1,
-            max_tokens=1024,
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.0
-            )
-            logUsage(response)
-            response = response["choices"][0]["text"].lstrip()
+            response = self.followThroughInformation("", text)
         
         print("----------------------------")
         return choice, response
