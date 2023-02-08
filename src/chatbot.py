@@ -63,6 +63,14 @@ class Function():
     
     def __repr__(self):
         return f"Func {self.number}: {self.function}"
+    
+    def showSimplifiedFunction(self):
+        if self.description != None:
+            return self.description
+        
+        else:
+            return f"{self.function}({', '.join(self.args)})"
+
 
 class ChatBot():
     def __init__(self, functions: List[Function] = [], readables: List[Function] = []):
@@ -179,6 +187,7 @@ class ChatBot():
     def makeReadableQueryEmbedding(self):
         apitexts = [i.showFunction() for i in self.readables]
         df = pd.DataFrame(apitexts, columns=["items"])
+        #df["simplified"] = [i.showSimplifiedFunction() for i in self.readables]
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df.to_csv('embedded_reads.csv', index=False)
     
@@ -193,12 +202,15 @@ class ChatBot():
     def makeFunctionQueryEmbedding(self):
         functiontexts = [i.showFunction() for i in self.functions]
         df = pd.DataFrame(functiontexts, columns=["items"])
+        #df["simplified"] = [i.showSimplifiedFunction() for i in self.functions]
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df.to_csv('embedded_functions.csv', index=False)
 
     def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
+
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        print(df)
         res = df.sort_values('similarities', ascending=False).head(1)
         newres = res.values.flatten().tolist()
         apinum = res.index[0]+1
