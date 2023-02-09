@@ -295,7 +295,7 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(self.info, data, JARVIS, question)
+        return loadPrompt("Analysis.txt").format(JARVIS, self.info, data, question)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):

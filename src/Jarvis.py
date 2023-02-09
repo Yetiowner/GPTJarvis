@@ -194,8 +194,7 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
       chosenchatbot.addInfo()
       return result
     if result[0].mode == "R":
-      explainedOutput = f"Result of ({result[0].showFunction()}): \n{output}"
-      chosenchatbot.register_addInfo(explainedOutput)
+      explainedOutput = f"Result of {thingtorun}: \n{output}"
       textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
       chosenchatbot.register_addInfo(f"Your response: {textResult}")
       chosenchatbot.addInfo()

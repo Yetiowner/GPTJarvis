@@ -1,10 +1,11 @@
+Answer the following question using the information I am about to give you.
+
+{}
+
 Information:
-{}
 
 {}
 
 {}
 
-Answer the following question using the information I just gave you.
-
-My request: {}
+My query: {}
