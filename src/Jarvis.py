@@ -193,8 +193,11 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
       chosenchatbot.register_addInfo(f"Your response: {result}")
       chosenchatbot.addInfo()
       return result
+    chosenchatbot.register_addHistory(f"{string}\n{chosentype} {thingtorun}")
+    chosenchatbot.addHistory()
     if result[0].mode == "R":
       explainedOutput = f"Result of {thingtorun}: \n{output}"
+      chosenchatbot.register_addInfo(explainedOutput)
       textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
       chosenchatbot.register_addInfo(f"Your response: {textResult}")
       chosenchatbot.addInfo()

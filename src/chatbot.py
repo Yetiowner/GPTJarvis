@@ -84,6 +84,8 @@ class ChatBot():
             readable.mode = "R"
         self.info = self.genInfoText()
         self.tempinfo = ""
+        self.requesthistory = ""
+        self.temphistory = ""
     
     def genInfoText(self):
         out = ""
@@ -158,6 +160,14 @@ class ChatBot():
         self.info += "\n"
         self.tempinfo = ""
     
+    def register_addHistory(self, info):
+        self.temphistory += info + "\n"
+    
+    def addHistory(self):
+        self.requesthistory += self.temphistory
+        self.requesthistory += "\n"
+        self.temphistory = ""
+    
     def breakConversation(self):
         self.info = self.genInfoText()
         self.tempinfo = ""
@@ -225,7 +235,7 @@ class ChatBot():
         func = newres[0]
         print(newres[-1])
 
-        text = loadPrompt("QueryResult.txt").format(api, func, self.info, prompt)
+        text = loadPrompt("QueryResult.txt").format(api, func, self.info, self.requesthistory, prompt)
         return text, apinum, funcnum
 
 
