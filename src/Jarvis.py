@@ -1,4 +1,4 @@
-from typing import get_type_hints
+from typing import *
 import inspect
 import os
 from os import listdir
@@ -12,7 +12,7 @@ import types
 from contextlib import redirect_stdout
 import shutil
 import GPTJarvis.src.voicebox as voicebox
-
+import GPTJarvis.src.chatbot as chatbot
 
 functionlist = []
 opqueue = []
@@ -48,15 +48,16 @@ def update():
       with redirect_stdout(file):
         try:
           result = eval(op, attrs)
-        except NameError:
-          result = "Failure!"
+          if result == None:
+            result = "Success!"
+        except Exception as e:
+          result = str(e)
     #while True:
     print(result)
     sys.stdout.flush()
   
 
 def init_main(scope="folder"):
-  from GPTJarvis.src import chatbot
   
   chatbot.loadApiKeyFromFile("secret.txt") # TODO delete when publish
 
@@ -113,7 +114,7 @@ def init_main(scope="folder"):
       readables.append(i)
   
   chosenchatbot = chatbot.ChatBot(functions, readables)
-  chatbot.init_browser()
+  #chatbot.init_browser()
 
   startStreamingOutput()
 
@@ -171,7 +172,7 @@ def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
   #createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
-def createQuery(string, chosenchatbot, functon_process_relationship, processes):
+def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes):
   chosentype, result = chosenchatbot.query(string)
   chosenchatbot.register_addInfo(f"My query: {string}")
   if chosentype == "N":
@@ -185,15 +186,16 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
     
     thingtorun = result[1]
 
-    chosenprocess.stdin.write(thingtorun+"\n")
-    chosenprocess.stdin.flush()
-    output = chosenprocess.stdout.readline().strip()
-    if output == "Failure!":
+    if thingtorun.split("(")[0] != result[0].function:
       result = chosenchatbot.followThroughInformation("", string)
       chosenchatbot.register_addInfo(f"Your response: {result}")
       chosenchatbot.addInfo()
       return result
-    chosenchatbot.register_addHistory(f"{string}\n{chosentype} {thingtorun}")
+
+    chosenprocess.stdin.write(thingtorun+"\n")
+    chosenprocess.stdin.flush()
+    output = chosenprocess.stdout.readline().strip()
+    chosenchatbot.register_addHistory(f"Me: {string}\nYou: {chosentype} {thingtorun}")
     chosenchatbot.addHistory()
     if result[0].mode == "R":
       explainedOutput = f"Result of {thingtorun}: \n{output}"
@@ -202,8 +204,13 @@ def createQuery(string, chosenchatbot, functon_process_relationship, processes):
       chosenchatbot.register_addInfo(f"Your response: {textResult}")
       chosenchatbot.addInfo()
       return textResult
-    chosenchatbot.addInfo()
-    return "Success!"
+    if result[0].mode == "F":
+      explainedOutput = f"Result of running {thingtorun}: \n{output}"
+      chosenchatbot.register_addInfo(explainedOutput)
+      textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
+      chosenchatbot.register_addInfo(f"Your response: {textResult}")
+      chosenchatbot.addInfo()
+      return textResult
     #print(chosenprocess)
     #print(thingtorun)
 

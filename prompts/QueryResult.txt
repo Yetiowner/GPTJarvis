@@ -1,23 +1,20 @@
-Here is an accessor: {}.
-
-Here is a function that can perform an action: {}
-
 Here is some information: {}
 
 I am about to give you a request.
 
-If the request is better suited to the function, reply with an F followed by the function filled in with the request (The function is in python) on the next line. However, if the accessor is better suited to the query, reply with an R, followed by the function filled in on the next line. Choose only one of these. Otherwise, if neither of the ones I listed are suited, reply with N. Do not make up functions.
+Example:
 
-E.g. What is time in london? 
-R getTime("London")
-
-E.g. Start up firefox
-F startProgram("Firefox")
-
-E.g. Tell me a story.
-N
+Me: What is time in london? 
+You: R getTime("London")
 
 Previous results: (
 {})
 
-My request: ({}) Only pick either the accessor or the function I gave you above, or if neither work, just reply N.
+Here is an accessor: {}.
+
+Here is a function that can perform an action: {}
+
+Only pick either the accessor or the function I gave you above, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply N.
+
+Me: {}
+You: 

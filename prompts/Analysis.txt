@@ -1,12 +1,9 @@
 Answer the following question using the information I am about to give you.
 
-{}
-
 Information:
-
 {}
-
 {}
 
 My query: {}
+{}
 Your response: 

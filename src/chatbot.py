@@ -65,6 +65,7 @@ class Function():
         return f"Func {self.number}: {self.function}"
     
     def showSimplifiedFunction(self):
+        return f"{self.function}({', '.join(self.args)})"
         if self.description != None:
             return self.description
         
@@ -99,12 +100,14 @@ class ChatBot():
         print("----------------------------")
         openai.api_key = apikey
         try:
+            int("asdf")
             embeddedread = self.loadReadableQueryEmbedding()
         except:
             self.makeReadableQueryEmbedding()
             embeddedread = self.loadReadableQueryEmbedding()
 
         try:
+            int("asdf")
             embeddedfunction = self.loadFunctionQueryEmbedding()
         except:
             self.makeFunctionQueryEmbedding()
@@ -195,10 +198,11 @@ class ChatBot():
         return df
     
     def makeReadableQueryEmbedding(self):
-        apitexts = [i.showFunction() for i in self.readables]
-        df = pd.DataFrame(apitexts, columns=["items"])
-        #df["simplified"] = [i.showSimplifiedFunction() for i in self.readables]
+        realreadables = [i.showFunction() for i in self.readables]
+        simplifiedreadables = [i.showSimplifiedFunction() for i in self.readables]
+        df = pd.DataFrame(simplifiedreadables, columns=["simplified"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
+        df["items"] = realreadables
         df.to_csv('embedded_reads.csv', index=False)
     
 
@@ -210,10 +214,11 @@ class ChatBot():
         return df
     
     def makeFunctionQueryEmbedding(self):
-        functiontexts = [i.showFunction() for i in self.functions]
-        df = pd.DataFrame(functiontexts, columns=["items"])
-        #df["simplified"] = [i.showSimplifiedFunction() for i in self.functions]
+        realfunctions = [i.showFunction() for i in self.functions]
+        simplifiedfunctions = [i.showSimplifiedFunction() for i in self.functions]
+        df = pd.DataFrame(simplifiedfunctions, columns=["simplified"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
+        df["items"] = realfunctions
         df.to_csv('embedded_functions.csv', index=False)
 
     def generateSetupText(self, df, df1, prompt):
@@ -224,7 +229,7 @@ class ChatBot():
         res = df.sort_values('similarities', ascending=False).head(1)
         newres = res.values.flatten().tolist()
         apinum = res.index[0]+1
-        api = newres[0]
+        api = newres[-2]
         print(newres[-1])
 
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
@@ -232,10 +237,10 @@ class ChatBot():
         res = df1.sort_values('similarities', ascending=False).head(1)
         newres = res.values.flatten().tolist()
         funcnum = res.index[0]+1
-        func = newres[0]
+        func = newres[-2]
         print(newres[-1])
 
-        text = loadPrompt("QueryResult.txt").format(api, func, self.info, self.requesthistory, prompt)
+        text = loadPrompt("QueryResult.txt").format(self.info, self.requesthistory, api, func, prompt)
         return text, apinum, funcnum
 
 
@@ -305,7 +310,7 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(JARVIS, self.info, data, question)
+        return loadPrompt("Analysis.txt").format(JARVIS, self.info, question, data)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
@@ -446,7 +451,7 @@ with open("keys.json", "r") as file:
     APIKEYS = json.load(file)
 
 
-APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
+"""APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)
 APIWikipedia = API("https://en.wikipedia.org/wiki/{}", ["searchterm"], datacleaning=wikiDataClean)
 #APIGoogle = API("https://www.google.com/search?q={}", ["searchterm"], description="Use this for things including statistics", datacleaning=googleDataClean)
 APIDateTime = API("https://www.timeapi.io/api/Time/current/zone?timeZone={}", ["timezone"], queryform={"timezone": "IANA time zone name"}, datacleaning=jsonDataClean)
@@ -454,7 +459,7 @@ APIMaths = API("https://www.wolframalpha.com/input?i={}", ["mathsquestion"], que
 APIWeather = API("http://api.weatherapi.com/v1/current.json?key=" + APIKEYS["WeatherAPI"] + "&q={}&aqi=no", ["location"], queryform={"location": "Latitude, Longitude or IP address or post code or city name"}, datacleaning=jsonDataClean)
 APIExchangeRate = API("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}", ["firstcurrency", "secondcurrency"], datacleaning=jsonDataClean)
 APIIPFinder = API("https://api.ipify.org/?format=json", datacleaning=jsonDataClean, description="Gets the IP address of the user")
-APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)
+APILocation = API("https://where-am-i.org/", description = "Use this to get the current location of the user.", datacleaning=whereamiDataClean, accessDelay=2)"""
 
 #print(chatbot.query("Quote what is said about Tony the Pony on question 1732348 on SO? Start from 'You can't parse [X]...', and translate it into french. Only say the first 5 words."))
 #print(chatbot.query("How many answers are on stack overflow question 75221583?"))
