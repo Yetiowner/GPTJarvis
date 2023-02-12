@@ -1,4 +1,4 @@
-Answer the following question using the information I am about to give you.
+Answer the following question using the information I am about to give you if it is relevant.
 
 Information:
 {}

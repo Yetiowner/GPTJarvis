@@ -87,6 +87,21 @@ class ChatBot():
         self.tempinfo = ""
         self.requesthistory = ""
         self.temphistory = ""
+        openai.api_key = apikey
+
+        try:
+            int("asdf")
+            self.embeddedread = self.loadReadableQueryEmbedding()
+        except:
+            self.makeReadableQueryEmbedding()
+            self.embeddedread = self.loadReadableQueryEmbedding()
+
+        try:
+            int("asdf")
+            self.embeddedfunction = self.loadFunctionQueryEmbedding()
+        except:
+            self.makeFunctionQueryEmbedding()
+            self.embeddedfunction = self.loadFunctionQueryEmbedding()
     
     def genInfoText(self):
         out = ""
@@ -98,22 +113,8 @@ class ChatBot():
     
     def query(self, text):
         print("----------------------------")
-        openai.api_key = apikey
-        try:
-            int("asdf")
-            embeddedread = self.loadReadableQueryEmbedding()
-        except:
-            self.makeReadableQueryEmbedding()
-            embeddedread = self.loadReadableQueryEmbedding()
 
-        try:
-            int("asdf")
-            embeddedfunction = self.loadFunctionQueryEmbedding()
-        except:
-            self.makeFunctionQueryEmbedding()
-            embeddedfunction = self.loadFunctionQueryEmbedding()
-
-        textToQuery, readnumber, funcnumber = self.generateSetupText(embeddedread, embeddedfunction, text)
+        textToQuery, readnumber, funcnumber = self.generateSetupText(self.embeddedread, self.embeddedfunction, text)
         print(textToQuery)
 
         #print(textToQuery)

@@ -14,6 +14,11 @@ import shutil
 import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
 
+#TODO: Put files in folder
+#TODO: add long term memory
+#TODO: add forgetfullness
+#TODO: add personalities
+
 functionlist = []
 opqueue = []
 
