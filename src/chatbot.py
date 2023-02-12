@@ -14,13 +14,13 @@ import numpy as np
 import json
 import inspect
 from GPTJarvis.src.utils import loadPrompt
-
-with open("usage.log", "a") as file:
-    file.write("--------------------\n")
+import sys
 
 
 MODEL = "text-davinci-003"
 JARVIS = loadPrompt("JarvisInfo.txt")
+PERMANENTINFO = loadPrompt("PermanentInfo.txt")
+FILEPATH = None
 
 class API():
     def __init__(self, link: str, querynames: list = [], querydescriptors: dict = {}, queryform: dict = {}, description: Optional[str] = None, datacleaning: Optional[Callable] = extracttxt.scrapeText, accessDelay = 0):
@@ -74,7 +74,7 @@ class Function():
 
 
 class ChatBot():
-    def __init__(self, functions: List[Function] = [], readables: List[Function] = []):
+    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None):
         self.functions = functions
         self.readables = readables
         for index, function in enumerate(self.functions):
@@ -83,11 +83,14 @@ class ChatBot():
         for index, readable in enumerate(self.readables):
             readable.number = index + 1
             readable.mode = "R"
+        self.info = info
         self.info = self.genInfoText()
         self.tempinfo = ""
         self.requesthistory = ""
         self.temphistory = ""
         openai.api_key = apikey
+        with open(FILEPATH+"usage.log", "a") as file:
+            file.write("--------------------\n")
 
         try:
             int("asdf")
@@ -105,8 +108,9 @@ class ChatBot():
     
     def genInfoText(self):
         out = ""
-        with open("aditionalInfo.txt", "r") as file:
-            out += file.read() + "\n"
+        if self.info:
+            out += self.info + "\n"
+        out += PERMANENTINFO + "\n"
         #out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
         #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
@@ -193,7 +197,7 @@ class ChatBot():
         return response
     
     def loadReadableQueryEmbedding(self):
-        df = pd.read_csv('embedded_reads.csv')
+        df = pd.read_csv(FILEPATH+'embedded_reads.csv')
         df["embedding"] = df.embedding.apply(eval)
         df["embedding"] = df.embedding.apply(np.array)
         return df
@@ -204,12 +208,12 @@ class ChatBot():
         df = pd.DataFrame(simplifiedreadables, columns=["simplified"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df["items"] = realreadables
-        df.to_csv('embedded_reads.csv', index=False)
+        df.to_csv(FILEPATH+'embedded_reads.csv', index=False)
     
 
 
     def loadFunctionQueryEmbedding(self):
-        df = pd.read_csv('embedded_functions.csv')
+        df = pd.read_csv(FILEPATH+'embedded_functions.csv')
         df["embedding"] = df.embedding.apply(eval)
         df["embedding"] = df.embedding.apply(np.array)
         return df
@@ -220,7 +224,7 @@ class ChatBot():
         df = pd.DataFrame(simplifiedfunctions, columns=["simplified"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df["items"] = realfunctions
-        df.to_csv('embedded_functions.csv', index=False)
+        df.to_csv(FILEPATH+'embedded_functions.csv', index=False)
 
     def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
@@ -280,7 +284,7 @@ class ChatBot():
             content = api.datacleaning(content)
         
         if type(content) == list:
-            with open("out.txt", "w", encoding="utf-8") as file:
+            with open(FILEPATH+"out.txt", "w", encoding="utf-8") as file:
                 file.write("\n---------------\n".join(content[0]))
             content, valuepairs = content
             content = self.getMostUsefulParagraph(content, valuepairs, prompt)
@@ -330,7 +334,7 @@ def remove_special(text):
     return ''.join([i if ord(i) < 128 else ' ' for i in text])
 
 def logUsage(openairesponse):
-    with open("usage.log", "a") as file:
+    with open(FILEPATH+"usage.log", "a") as file:
         try:
             file.write(f"{openairesponse['model']}: {openairesponse['usage']['total_tokens']}\n")
         except:
@@ -448,8 +452,6 @@ def init_browser():
     browser = webdriver.Firefox(options=options)
 
 
-with open("keys.json", "r") as file:
-    APIKEYS = json.load(file)
 
 
 """APIStackOverFlow = API("https://stackoverflow.com/questions/{}", ["questionnum"], {"questionnum": "The number of the question"}, {"questionnum": int}, datacleaning=stackoverflowDataClean)

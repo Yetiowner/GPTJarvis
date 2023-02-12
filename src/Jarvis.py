@@ -13,6 +13,7 @@ from contextlib import redirect_stdout
 import shutil
 import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
+import ctypes
 
 #TODO: Put files in folder
 #TODO: add long term memory
@@ -21,6 +22,10 @@ import GPTJarvis.src.chatbot as chatbot
 
 functionlist = []
 opqueue = []
+apiKey = None
+FILEPATH = ".Jarvis/"
+chatbot.FILEPATH = FILEPATH
+voicebox.FILEPATH = FILEPATH
 
 
 def runnable(func):
@@ -47,7 +52,7 @@ def update():
     frame = inspect.stack()[1]
     module = inspect.getmodule(frame[0])
     attrs = module.__dict__
-    filename = f"streamedFileOutput/{os.path.basename(module.__file__)}.txt"
+    filename = f"{FILEPATH}streamedFileOutput/{os.path.basename(module.__file__)}.txt"
 
     with open(filename, "a") as file:
       with redirect_stdout(file):
@@ -60,30 +65,49 @@ def update():
     #while True:
     print(result)
     sys.stdout.flush()
-  
 
-def init_main(scope="folder"):
-  
-  chatbot.loadApiKeyFromFile("secret.txt") # TODO delete when publish
+def loadApiKeyFromFile(openai_key_path):
+  chatbot.loadApiKeyFromFile(openai_key_path)
+
+def setKey(key):
+  chatbot.apikey = key
+
+def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None):
+
+  if type(scope) == str:
+    scope = [scope]
+
+  allaccessible = []
+  for item in scope:
+    if item == "folder":
+      frame = inspect.stack()[1]
+      module = inspect.getmodule(frame[0])
+      filename = module.__file__
+      dirname = os.path.dirname(filename)
+      onlyfiles = [dirname + ("\\" if "\\" in filename else "/") + f for f in listdir(dirname) if isfile(join(dirname, f)) and os.path.splitext(f)[1] == ".py"]
+      onlyfiles.remove(filename)
+      accessablefiles = onlyfiles
+    else:
+      accessablefiles = item
+    allaccessible.extend(accessablefiles)
+  accessablefiles = allaccessible
+
+
+  if openai_key:
+    chatbot.apikey = openai_key
 
   try:
-    shutil.rmtree("streamedFileOutput")
+    shutil.rmtree(FILEPATH+"streamedFileOutput")
   except FileNotFoundError:
     pass
-  os.mkdir("streamedFileOutput")
+  os.mkdir(FILEPATH+"streamedFileOutput")
 
-  #init_browser()
-  if scope == "folder":
-    frame = inspect.stack()[1]
-    module = inspect.getmodule(frame[0])
-    filename = module.__file__
-    dirname = os.path.dirname(filename)
-    onlyfiles = [dirname + ("\\" if "\\" in filename else "/") + f for f in listdir(dirname) if isfile(join(dirname, f)) and os.path.splitext(f)[1] == ".py"]
-    onlyfiles.remove(filename)
-    accessablefiles = onlyfiles
-  else:
-    accessablefiles = scope
-  print(accessablefiles)
+  makeHidden(FILEPATH)
+  if not(os.path.isdir(FILEPATH)):
+    os.mkdir(FILEPATH)
+    makeHidden(FILEPATH)
+
+
   processes = []
   for file in accessablefiles:
     processes.append(subprocess.Popen([sys.executable, file], stdin=PIPE, stdout=PIPE, universal_newlines=True))
@@ -118,13 +142,15 @@ def init_main(scope="folder"):
     for i in modulereadables:
       readables.append(i)
   
-  chosenchatbot = chatbot.ChatBot(functions, readables)
-  #chatbot.init_browser()
+  chosenchatbot = chatbot.ChatBot(functions, readables, info)
 
   startStreamingOutput()
 
   runProcessMainloop(chosenchatbot, functon_process_relationship, processes)
   
+def makeHidden(path):
+  FILE_ATTRIBUTE_HIDDEN = 0x02
+  ctypes.windll.kernel32.SetFileAttributesW(path, FILE_ATTRIBUTE_HIDDEN)
 
 def startStreamingOutput():
   thread = threading.Thread(target=streamOutput)
@@ -132,10 +158,10 @@ def startStreamingOutput():
 
 def streamOutput():
   lastfilename = None
-  mypath = "streamedFileOutput"
+  mypath = FILEPATH+"streamedFileOutput"
   linereached = {}
   while True:
-    onlyfiles = ["streamedFileOutput" + "/" + f for f in listdir(mypath) if isfile(join(mypath, f))]
+    onlyfiles = [FILEPATH+"streamedFileOutput" + "/" + f for f in listdir(mypath) if isfile(join(mypath, f))]
     for file in onlyfiles:
       try:
         with open(file, "r+") as openedfile:
