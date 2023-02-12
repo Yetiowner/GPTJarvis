@@ -10,11 +10,11 @@ You: R getTime("London")
 Previous results: (
 {})
 
-Here is an accessor: {}.
+Here is a list of accessors: {}.
 
-Here is a function that can perform an action: {}
+Here is a list of functions that can perform an action: {}
 
-Only pick either the accessor or the function I gave you above, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply N.
+Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply N.
 
 Me: {}
 You: 

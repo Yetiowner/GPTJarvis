@@ -1,4 +1,4 @@
-Answer the following question using the information I am about to give you if it is relevant.
+Answer the following question. Do not volunteer unneccesary information.
 
 Information:
 {}

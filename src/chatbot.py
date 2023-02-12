@@ -59,22 +59,22 @@ class Function():
         self.mode = None
     
     def showFunction(self):
-        return f"{self.function}({', '.join(self.args)}){' Where ' + str(self.typeannots) if self.typeannots else ''}{' Description: ' + self.description if self.description else ''}"
+        return f"{self.function}({', '.join(self.args)}){' Description: ' + self.description if self.description else ''}"
     
     def __repr__(self):
         return f"Func {self.number}: {self.function}"
     
     def showSimplifiedFunction(self):
-        return f"{self.function}({', '.join(self.args)})"
+        #return f"{self.function}({', '.join(self.args)})"
         if self.description != None:
-            return self.description
+            return f"{self.function} with arguments {', '.join(self.args)} Where: " + self.description
         
         else:
-            return f"{self.function}({', '.join(self.args)})"
+            return f"{self.function} with arguments {', '.join(self.args)}"
 
 
 class ChatBot():
-    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None):
+    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3):
         self.functions = functions
         self.readables = readables
         for index, function in enumerate(self.functions):
@@ -88,6 +88,7 @@ class ChatBot():
         self.tempinfo = ""
         self.requesthistory = ""
         self.temphistory = ""
+        self.sampleCount = sampleCount
         openai.api_key = apikey
         with open(FILEPATH+"usage.log", "a") as file:
             file.write("--------------------\n")
@@ -108,9 +109,9 @@ class ChatBot():
     
     def genInfoText(self):
         out = ""
-        if self.info:
-            out += self.info + "\n"
         out += PERMANENTINFO + "\n"
+        if self.info:
+            out += self.info + "\n\n"
         #out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
         #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
@@ -118,7 +119,7 @@ class ChatBot():
     def query(self, text):
         print("----------------------------")
 
-        textToQuery, readnumber, funcnumber = self.generateSetupText(self.embeddedread, self.embeddedfunction, text)
+        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text)
         print(textToQuery)
 
         #print(textToQuery)
@@ -144,11 +145,22 @@ class ChatBot():
 
 
         if choice == "R":
+            readnumber = readnumbers[0]
+            for readablenumber in readnumbers:
+                chosenreadable = self.getReadFromNumber(readablenumber)
+                if chosenreadable.function == restofresponse.split("(")[0]:
+                    readnumber = readablenumber
             chosenread = self.getReadFromNumber(readnumber)
             chosenreadtorun = restofresponse
             response = [chosenread, chosenreadtorun]
 
         elif choice == "F":
+            funcnumber = funcnumbers[0]
+            for functionnumber in funcnumbers:
+                chosenfunc = self.getFuncFromNumber(functionnumber)
+                if chosenfunc.function == restofresponse.split("(")[0]:
+                    funcnumber = functionnumber
+            print(funcnumber)
             chosenfunction = self.getFuncFromNumber(funcnumber)
             chosenfunctiontorun = restofresponse
             response = [chosenfunction, chosenfunctiontorun]
@@ -228,25 +240,40 @@ class ChatBot():
 
     def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
-
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        df = df[df['similarities'] > 0.65]
         print(df)
-        res = df.sort_values('similarities', ascending=False).head(1)
-        newres = res.values.flatten().tolist()
-        apinum = res.index[0]+1
-        api = newres[-2]
-        print(newres[-1])
+        result = df.sort_values('similarities', ascending=False).head(self.sampleCount)
+        readables = []
+        readablenums = []
+        for index, res in result.iterrows():
+            res = res.values
+            newres = res
+            readablenum = index+1
+            readable = newres[-2]
+            readables.append(readable)
+            readablenums.append(readablenum)
+        readables = "\n".join(readables)
 
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
         df1['similarities'] = df1.embedding.apply(lambda x: cosine_similarity(x, embedding))
-        res = df1.sort_values('similarities', ascending=False).head(1)
-        newres = res.values.flatten().tolist()
-        funcnum = res.index[0]+1
-        func = newres[-2]
-        print(newres[-1])
+        df1 = df1[df1['similarities'] > 0.65]
+        print(df1)
+        result = df1.sort_values('similarities', ascending=False).head(self.sampleCount)
+        funcs = []
+        funcnums = []
+        for index, res in result.iterrows():
+            res = res.values
+            newres = res
+            funcnum = index+1
+            func = newres[-2]
+            funcs.append(func)
+            funcnums.append(funcnum)
+            print(newres[-1])
+        funcs = "\n".join(funcs)
 
-        text = loadPrompt("QueryResult.txt").format(self.info, self.requesthistory, api, func, prompt)
-        return text, apinum, funcnum
+        text = loadPrompt("QueryResult.txt").format(self.info, self.requesthistory, readables, funcs, prompt)
+        return text, readablenums, funcnums
 
 
     def getMostUsefulParagraph(self, paragraphlist, valuepairs, prompt):

@@ -8,7 +8,7 @@ import glob
 
 @Jarvis.readable
 def getWeather(latitude, longitude):
-    """Returns the current weather as a string"""
+    """Returns the current weather as a string. Synonyms: temperature"""
 
     daily = Daily()
     options = Options(latitude, longitude, current_weather=True)
@@ -30,6 +30,7 @@ def getWeather(latitude, longitude):
 
 @Jarvis.runnable
 def startProgram(program_name):
+    """Starts up the app of choice. Synonyms: Run, start"""
     path = pathlib.Path.home() / 'Desktop'
     path1 = r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs"
     results = find_files(program_name, path)

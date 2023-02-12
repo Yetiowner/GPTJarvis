@@ -15,7 +15,7 @@ import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
 import ctypes
 
-#TODO: Put files in folder
+#TODO: multiple options for func per request
 #TODO: add long term memory
 #TODO: add forgetfullness
 #TODO: add personalities
@@ -205,6 +205,7 @@ def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
   
 def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes):
   chosentype, result = chosenchatbot.query(string)
+  print(result)
   chosenchatbot.register_addInfo(f"My query: {string}")
   if chosentype == "N":
     chosenchatbot.register_addInfo(f"Your response: {result}")
