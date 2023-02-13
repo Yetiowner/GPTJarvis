@@ -13,6 +13,7 @@ from contextlib import redirect_stdout
 import shutil
 import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
+import GPTJarvis.src.personalities as personalities
 import ctypes
 
 #TODO: multiple options for func per request
@@ -72,7 +73,7 @@ def loadApiKeyFromFile(openai_key_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, memory_retention_time = 30):
+def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 30, personality = personalities.JARVIS):
 
   if type(scope) == str:
     scope = [scope]
@@ -142,7 +143,7 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
     for i in modulereadables:
       readables.append(i)
   
-  chosenchatbot = chatbot.ChatBot(functions, readables, info)
+  chosenchatbot = chatbot.ChatBot(functions, readables, info, sampleCount = sampleCount, personality = personality)
 
   startStreamingOutput()
 

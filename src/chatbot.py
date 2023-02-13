@@ -14,11 +14,11 @@ import numpy as np
 import json
 import inspect
 from GPTJarvis.src.utils import loadPrompt
+import GPTJarvis.src.personalities as personalities
 import sys
 
 
 MODEL = "text-davinci-003"
-JARVIS = loadPrompt("JarvisInfo.txt")
 PERMANENTINFO = loadPrompt("PermanentInfo.txt")
 FILEPATH = None
 
@@ -74,7 +74,7 @@ class Function():
 
 
 class ChatBot():
-    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3):
+    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3, personality = personalities.JARVIS):
         self.functions = functions
         self.readables = readables
         for index, function in enumerate(self.functions):
@@ -89,6 +89,7 @@ class ChatBot():
         self.requesthistory = ""
         self.temphistory = ""
         self.sampleCount = sampleCount
+        self.personality = personality
         openai.api_key = apikey
         with open(FILEPATH+"usage.log", "a") as file:
             file.write("--------------------\n")
@@ -189,6 +190,8 @@ class ChatBot():
     
     def breakConversation(self):
         self.info = self.genInfoText()
+        self.requesthistory = ""
+        self.temphistory = ""
         self.tempinfo = ""
     
     def followThroughInformation(self, information, question):
@@ -271,7 +274,7 @@ class ChatBot():
             print(newres[-1])
         funcs = "\n".join(funcs)
 
-        text = loadPrompt("QueryResult.txt").format(self.info, self.requesthistory, readables, funcs, prompt)
+        text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, self.requesthistory, readables, funcs, prompt)
         return text, readablenums, funcnums
 
 
@@ -341,7 +344,7 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(JARVIS, self.info, question, data)
+        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, question, data)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
