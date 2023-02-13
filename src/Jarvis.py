@@ -72,7 +72,7 @@ def loadApiKeyFromFile(openai_key_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None):
+def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, memory_retention_time = 30):
 
   if type(scope) == str:
     scope = [scope]
@@ -146,7 +146,7 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
 
   startStreamingOutput()
 
-  runProcessMainloop(chosenchatbot, functon_process_relationship, processes)
+  runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time)
   
 def makeHidden(path):
   FILE_ATTRIBUTE_HIDDEN = 0x02
@@ -182,14 +182,20 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot, functon_process_relationship, processes):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time):
   """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
   createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
   #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
   #voicebox.say(ans)
   #chosenchatbot.breakConversation()
   while True:
-    ans1 = createQuery(input("Enter a query: "), chosenchatbot, functon_process_relationship, processes)
+    startWaitingTime = time.time()
+    qText = input("Enter a query: ")
+    timeTaken = time.time()-startWaitingTime
+    if timeTaken > memory_retention_time:
+      print("Breaking conversation.")
+      chosenchatbot.breakConversation()
+    ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, processes)
     voicebox.say(ans1)
   """print("\n\n")
   ans1_2 = createQuery("Is this suitable for ice cream?", chosenchatbot, functon_process_relationship, processes)

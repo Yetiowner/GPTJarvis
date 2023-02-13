@@ -83,7 +83,7 @@ class ChatBot():
         for index, readable in enumerate(self.readables):
             readable.number = index + 1
             readable.mode = "R"
-        self.info = info
+        self.originalinfo = PERMANENTINFO + "\n" + info
         self.info = self.genInfoText()
         self.tempinfo = ""
         self.requesthistory = ""
@@ -109,9 +109,8 @@ class ChatBot():
     
     def genInfoText(self):
         out = ""
-        out += PERMANENTINFO + "\n"
-        if self.info:
-            out += self.info + "\n\n"
+        if self.originalinfo:
+            out += self.originalinfo + "\n\n"
         #out += self.getDataFromLink("https://where-am-i.org/", APILocation, "Where am I?") + "\n"
         #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
