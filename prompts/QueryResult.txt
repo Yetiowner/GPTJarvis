@@ -9,6 +9,9 @@ Example:
 Me: What is time in london? 
 You: R getTime("London")
 
+Me: Hello.
+You: N
+
 Previous results: (
 {})
 

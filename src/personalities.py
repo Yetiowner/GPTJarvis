@@ -1,12 +1,19 @@
+import json
+
 class Personality():
-  def __init__(self, prompt) -> None:
+  def __init__(self, prompt, jsontext) -> None:
     self.prompt = prompt
-    #print(self.prompt)
+    self.voice = jsontext["voice"]
+    self.pitch = jsontext["pitch"]
+    self.speed = jsontext["speed"]
 
 def loadPersonality(name):
   with open(f"src/personalities_list/{name}/Prompt.txt") as file:
     prompt = file.read()
-  return Personality(prompt)
+  with open(f"src/personalities_list/{name}/voice.json") as file:
+    jsontext = json.load(file)
+  
+  return Personality(prompt, jsontext)
 
 JARVIS = loadPersonality("Jarvis")
 FRIDAY = loadPersonality("Friday")

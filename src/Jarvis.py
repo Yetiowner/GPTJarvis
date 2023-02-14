@@ -147,7 +147,7 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
 
   startStreamingOutput()
 
-  runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time)
+  runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality)
   
 def makeHidden(path):
   FILE_ATTRIBUTE_HIDDEN = 0x02
@@ -183,7 +183,7 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time, personality):
   """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
   createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
   #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
@@ -197,7 +197,7 @@ def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relations
       print("Breaking conversation.")
       chosenchatbot.breakConversation()
     ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, processes)
-    voicebox.say(ans1)
+    voicebox.say(ans1, personality=personality)
   """print("\n\n")
   ans1_2 = createQuery("Is this suitable for ice cream?", chosenchatbot, functon_process_relationship, processes)
   voicebox.say(ans1_2)
