@@ -23,32 +23,36 @@ def say(text, mode=MODE, personality=personalities.JARVIS):
     timex = time.time()
     url = f"https://api.streamelements.com/kappa/v2/speech?voice={personality.voice}&text={quote(text)}" # thx to https://github.com/styler for API
     data = requests.get(url).content
-    print(time.time()-timex)
     try:
       os.remove(FILEPATH+'voiceclip.mp3')
     except FileNotFoundError:
       pass
     with open(FILEPATH+'voiceclip.mp3', 'wb') as f:
       f.write(data)
-
-    try:
-      os.remove(f"{FILEPATH}file.wav")
-    except FileNotFoundError:
-      pass
       
-    print(time.time()-timex)
+    #print(time.time()-timex)
     subprocess.run(["ffmpeg", "-i",  f"{FILEPATH}voiceclip.mp3", "-speed", "16", f"{FILEPATH}file.wav", "-hide_banner", "-loglevel", "error"])
-    print(time.time()-timex)
+    #print(time.time()-timex)
     data, samplerate = sf.read(FILEPATH+"file.wav")
     y_stretch = pyrb.time_stretch(data, samplerate, personality.speed)
     y_shift = pyrb.pitch_shift(y_stretch, samplerate, personality.pitch)
     sf.write(FILEPATH+"outputfile1X5.wav", y_shift, samplerate, format='wav')
-    print(time.time()-timex)
+    #print(time.time()-timex)
     song = AudioSegment.from_wav(FILEPATH+"outputfile1X5.wav")
-    print(time.time()-timex)
+    #print(time.time()-timex)
     play(song)
     try:
       os.remove(f"{FILEPATH}outputfile1X5.wav")
+    except FileNotFoundError:
+      pass
+    
+    try:
+      os.remove(f"{FILEPATH}file.wav")
+    except FileNotFoundError:
+      pass
+
+    try:
+      os.remove(f"{FILEPATH}voiceclip.mp3")
     except FileNotFoundError:
       pass
 
@@ -95,5 +99,5 @@ for voice in voices:
 #say("I wondered why only you two survived strucker's experiments. Now I don't. There is no man in charge. There is only... me.", personality=personalities.ULTRON)
 #say("Worth? No. Why would you be worthy? You are all killers! World peace is my initiative, and I will pursue it, by the extinction of the avengers.", personality=personalities.ULTRON)
 #say("I will destroy you all! Humanity is a curse that must be destroyed!", personality=personalities.ULTRON)
-say("Never gonna give you up, never gonna let you down, never gonna run around and desert you. Never gonna make you cry, never gonna say goodbye, never gonna tell a lie and hurt you.", personality=personalities.ULTRON)
+#say("Never gonna give you up, never gonna let you down, never gonna run around and desert you. Never gonna make you cry, never gonna say goodbye, never gonna tell a lie and hurt you.", personality=personalities.ULTRON)
 #say("Hello world")

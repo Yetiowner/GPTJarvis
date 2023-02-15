@@ -83,7 +83,7 @@ class ChatBot():
         for index, readable in enumerate(self.readables):
             readable.number = index + 1
             readable.mode = "R"
-        self.originalinfo = PERMANENTINFO + "\n" + info
+        self.originalinfo = PERMANENTINFO + "\n\n\n" + info
         self.info = self.genInfoText()
         self.tempinfo = ""
         self.requesthistory = ""
@@ -274,7 +274,7 @@ class ChatBot():
             print(newres[-1])
         funcs = "\n".join(funcs)
 
-        text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, self.requesthistory, readables, funcs, prompt)
+        text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, readables, funcs, self.requesthistory, prompt)
         return text, readablenums, funcnums
 
 
@@ -344,7 +344,7 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, question, data)
+        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, self.requesthistory, question, data)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):

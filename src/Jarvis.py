@@ -68,7 +68,14 @@ def update():
     sys.stdout.flush()
 
 def loadApiKeyFromFile(openai_key_path):
-  chatbot.loadApiKeyFromFile(openai_key_path)
+  with open(openai_key_path, "r") as f:
+    apikey = f.read()
+  return apikey
+
+def loadInfoFromFile(info_path):
+  with open(info_path, "r") as f:
+    info = f.read()
+  return info
 
 def setKey(key):
   chatbot.apikey = key
@@ -213,10 +220,10 @@ def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relations
 def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes):
   chosentype, result = chosenchatbot.query(string)
   print(result)
-  chosenchatbot.register_addInfo(f"My query: {string}")
+  chosenchatbot.register_addHistory(f"My query: {string}")
   if chosentype == "N":
-    chosenchatbot.register_addInfo(f"Your response: {result}")
-    chosenchatbot.addInfo()
+    chosenchatbot.register_addHistory(f"Your response: N {result}")
+    chosenchatbot.addHistory()
     return result
   else:
     for function in functon_process_relationship:
@@ -227,28 +234,37 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
 
     if thingtorun.split("(")[0] != result[0].function:
       result = chosenchatbot.followThroughInformation("", string)
-      chosenchatbot.register_addInfo(f"Your response: {result}")
-      chosenchatbot.addInfo()
+      chosenchatbot.register_addHistory(f"Your response: {result}")
+      chosenchatbot.addHistory()
       return result
 
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
     output = chosenprocess.stdout.readline().strip()
-    chosenchatbot.register_addHistory(f"Me: {string}\nYou: {chosentype} {thingtorun}")
-    chosenchatbot.addHistory()
+    #chosenchatbot.register_addHistory(f"Me: {string}\n{chosentype} {thingtorun}")
     if result[0].mode == "R":
       explainedOutput = f"Result of {thingtorun}: \n{output}"
+
       chosenchatbot.register_addInfo(explainedOutput)
-      textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
-      chosenchatbot.register_addInfo(f"Your response: {textResult}")
       chosenchatbot.addInfo()
+
+      chosenchatbot.register_addHistory(explainedOutput)
+      textResult = chosenchatbot.followThroughInformation(explainedOutput + f" Where {result[0].showFunction()}", string)
+      chosenchatbot.register_addHistory(f"You: {textResult}")
+      chosenchatbot.addHistory()
+      #chosenchatbot.register_addInfo(f"Your response: {textResult}")
+      #chosenchatbot.addInfo()
       return textResult
+    chosenchatbot.addHistory()
     if result[0].mode == "F":
       explainedOutput = f"Result of running {thingtorun}: \n{output}"
       chosenchatbot.register_addInfo(explainedOutput)
-      textResult = chosenchatbot.followThroughInformation(explainedOutput, string)
-      chosenchatbot.register_addInfo(f"Your response: {textResult}")
       chosenchatbot.addInfo()
+
+      chosenchatbot.register_addHistory(explainedOutput)
+      textResult = chosenchatbot.followThroughInformation(explainedOutput + f" Where {result[0].showFunction()}", string)
+      chosenchatbot.register_addHistory(f"You: {textResult}")
+      chosenchatbot.addHistory()
       return textResult
     #print(chosenprocess)
     #print(thingtorun)
