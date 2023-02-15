@@ -1,14 +1,11 @@
 from urllib.parse import quote
 import requests
-from playsound import playsound # pip install playsound==1.2.2
-import io
 import os
 import time
 import GPTJarvis.src.personalities as personalities
 from pydub import AudioSegment # Install ffmpeg exes and add to path
 import soundfile as sf
 import pyrubberband as pyrb # https://breakfastquay.com/rubberband/index.html Install CLU and add to path
-import deep_timeit
 import subprocess
 from pydub.playback import play
 
@@ -40,7 +37,7 @@ def say(text, mode=MODE, personality=personalities.JARVIS):
       pass
       
     print(time.time()-timex)
-    subprocess.run(["ffmpeg", "-i",  f"{FILEPATH}voiceclip.mp3", "-speed", "16", f"{FILEPATH}file.wav"])
+    subprocess.run(["ffmpeg", "-i",  f"{FILEPATH}voiceclip.mp3", "-speed", "16", f"{FILEPATH}file.wav", "-hide_banner", "-loglevel", "error"])
     print(time.time()-timex)
     data, samplerate = sf.read(FILEPATH+"file.wav")
     y_stretch = pyrb.time_stretch(data, samplerate, personality.speed)
@@ -98,6 +95,5 @@ for voice in voices:
 #say("I wondered why only you two survived strucker's experiments. Now I don't. There is no man in charge. There is only... me.", personality=personalities.ULTRON)
 #say("Worth? No. Why would you be worthy? You are all killers! World peace is my initiative, and I will pursue it, by the extinction of the avengers.", personality=personalities.ULTRON)
 #say("I will destroy you all! Humanity is a curse that must be destroyed!", personality=personalities.ULTRON)
-#say("Never gonna give you up, never gonna let you down, never gonna run around and desert you. Never gonna make you cry, never gonna say goodbye, never gonna tell a lie and hurt you.", personality=personalities.ULTRON)
-#say("Allow me to introduce myself. I am Jarvis. A virtual artificial intelligence. And I am here to assist you with a variety of tasks as best I can, 24 hours a day, 7 days a week. Importing all preferences from home interface. Systems now fully operational.")
+say("Never gonna give you up, never gonna let you down, never gonna run around and desert you. Never gonna make you cry, never gonna say goodbye, never gonna tell a lie and hurt you.", personality=personalities.ULTRON)
 #say("Hello world")
