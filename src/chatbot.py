@@ -129,7 +129,7 @@ class ChatBot():
         response = openai.Completion.create(
         engine=MODEL,
         prompt=textToQuery,
-        temperature=0.2,
+        temperature=1.0,
         max_tokens=512,
         top_p=1.0,
         frequency_penalty=0.0,
@@ -167,7 +167,7 @@ class ChatBot():
 
         elif choice == "N":
             print("=======================")
-            response = self.followThroughInformation("", text)
+            response = restofresponse
         
         print("----------------------------")
         return choice, response

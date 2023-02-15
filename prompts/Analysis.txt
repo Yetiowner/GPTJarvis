@@ -1,4 +1,4 @@
-Answer the following question. Do not volunteer unneccesary information.
+Answer the following question. Do not volunteer unneccesary information, and only use information I have asked you about. Don't use information I haven't asked you about.
 
 Information:
 {}

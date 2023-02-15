@@ -73,7 +73,7 @@ def loadApiKeyFromFile(openai_key_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 30, personality = personalities.JARVIS):
+def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 900, personality = personalities.JARVIS):
 
   if type(scope) == str:
     scope = [scope]

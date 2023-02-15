@@ -10,7 +10,7 @@ Me: What is time in london?
 You: R getTime("London")
 
 Me: Hello.
-You: N
+You: N Hello.
 
 Previous results: (
 {})
@@ -19,7 +19,7 @@ Here is a list of accessors: {}.
 
 Here is a list of functions that can perform an action: {}
 
-Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply N.
+Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply "N" followed by your response as the character I told you to be.
 
 Me: {}
 You: 
