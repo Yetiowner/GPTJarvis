@@ -1,4 +1,4 @@
-import GPTJarvis.src.Jarvis as Jarvis
+from GPTJarvis import Jarvis
 import os
 from openmeteo_py import Hourly,Daily,Options,OWmanager
 import pathlib

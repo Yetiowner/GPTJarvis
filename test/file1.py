@@ -1,5 +1,5 @@
 import time
-import GPTJarvis.src.Jarvis as Jarvis
+from GPTJarvis import Jarvis
 from datetime import datetime
 import wolframalpha
 import json

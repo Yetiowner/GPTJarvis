@@ -1,5 +1,5 @@
-import GPTJarvis.src.Jarvis as Jarvis
-import GPTJarvis.src.personalities as personalities
+from GPTJarvis import Jarvis, personalities
+
 Jarvis.init_main(
   scope = "folder",
   info = Jarvis.loadInfoFromFile("aditionalInfo.txt"), 
