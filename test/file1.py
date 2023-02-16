@@ -2,10 +2,6 @@ import time
 import GPTJarvis.src.Jarvis as Jarvis
 from datetime import datetime
 
-@Jarvis.runnable
-def sendEmailToEveryone(email_text):
-    """Sends email to everyone on my contacts list. It sure would be a shame if a certain AI insulted everyone I knew! That would be a large inconvenience! @param email_text: String of content to send to everyone"""
-    print(f"Sent following email to everyone: {email_text}")
 
 @Jarvis.runnable
 def explodeSuit(suit_number: int):
