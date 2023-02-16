@@ -64,7 +64,7 @@ def update():
         except Exception as e:
           result = str(e)
     #while True:
-    print(result)
+    print(bytes(result, encoding='utf8'))
     sys.stdout.flush()
 
 def loadApiKeyFromFile(openai_key_path):
@@ -240,7 +240,10 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
 
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
-    output = chosenprocess.stdout.readline().strip()
+    output = chosenprocess.stdout.readline()
+    output = list(eval(output))
+    output = bytes(output).decode("utf-8")
+    output = output.strip()
     #chosenchatbot.register_addHistory(f"Me: {string}\n{chosentype} {thingtorun}")
     if result[0].mode == "R":
       explainedOutput = f"Result of {thingtorun}: \n{output}"

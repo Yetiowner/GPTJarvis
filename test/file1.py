@@ -1,7 +1,21 @@
 import time
 import GPTJarvis.src.Jarvis as Jarvis
 from datetime import datetime
+import wolframalpha
+import json
 
+with open("keys.json", "r") as file:
+    app_id = json.load(file)["WolframAlpha"]
+client = wolframalpha.Client(app_id)
+
+@Jarvis.readable
+def doMaths(mathsExpr):
+    """Function that takes in a maths expression of type string and returns the solution of the maths problem."""
+    res = client.query(mathsExpr)
+    answer = "\n".join([i.text for i in res.results])
+    return answer
+
+#print(doMaths("integral(e^(3x^2))"))
 
 @Jarvis.runnable
 def explodeSuit(suit_number: int):
