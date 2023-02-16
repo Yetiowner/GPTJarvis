@@ -19,12 +19,15 @@ import ctypes
 #TODO: add long term memory
 #TODO: add forgetfullness
 #TODO: add folder scopes
+#TODO: add perma functio wrapper
+#TODO: disable the single stage double type bug e.g. R getWeather(40.073773,-82.989133) The current weather at 40.073773, -82.989133 is overcast with a temperature of -3.3°C, Sir.
 
 functionlist = []
 opqueue = []
 apiKey = None
 FILEPATH = ".Jarvis/"
 UNLIKELYNAMESPACECOLLIDABLE = "ThereIsAFunctionHereASDFASDFASDFASDFASDF"
+UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
 chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
@@ -64,7 +67,7 @@ def update():
         except Exception as e:
           result = str(e)
     #while True:
-    print(bytes(result, encoding='utf8'))
+    print(UNLIKELYNAMESPACECOLLIDABLE1+str(bytes(str(result), encoding='utf8')))
     sys.stdout.flush()
 
 def loadApiKeyFromFile(openai_key_path):
@@ -233,6 +236,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
         chosenprocess = function[1]
     
     thingtorun = result[1]
+    if "\n" in thingtorun:
+      thingtorun = thingtorun.split("\n")[0]
 
     if thingtorun.split("(")[0] != result[0].function:
       result = chosenchatbot.followThroughInformation("", string)
@@ -242,13 +247,17 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
 
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
-    output = chosenprocess.stdout.readline()
-    output = list(eval(output))
-    output = bytes(output).decode("utf-8")
-    output = output.strip()
+    validoutput = False
+    while not(validoutput):
+      output = chosenprocess.stdout.readline()
+      if output.startswith(UNLIKELYNAMESPACECOLLIDABLE1):
+        output = list(eval(output[len(UNLIKELYNAMESPACECOLLIDABLE1):]))
+        output = bytes(output).decode("utf-8")
+        output = output.strip()
+        validoutput = True
     #chosenchatbot.register_addHistory(f"Me: {string}\n{chosentype} {thingtorun}")
     if result[0].mode == "R":
-      explainedOutput = f"Result of {thingtorun}: \n{output}"
+      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
 
       chosenchatbot.register_addInfo(explainedOutput)
       chosenchatbot.addInfo()
@@ -262,7 +271,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
       return textResult
     chosenchatbot.addHistory()
     if result[0].mode == "F":
-      explainedOutput = f"Result of running {thingtorun}: \n{output}"
+      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
       chosenchatbot.register_addInfo(explainedOutput)
       chosenchatbot.addInfo()
 
