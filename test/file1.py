@@ -15,8 +15,6 @@ def doMaths(mathsExpr):
     answer = "\n".join([i.text for i in res.results])
     return answer
 
-#print(doMaths("integral(e^(3x^2))"))
-
 @Jarvis.runnable
 def explodeSuit(suit_number: int):
     """Detonates suit. @param suit_number: int representing suit number, or "mark" number. Synonyms: Destroy suit, blow suit, deactivate suit."""
@@ -42,6 +40,9 @@ def foo(a):
     """Bar"""
     return "baz"
 
+print("Here.")
 Jarvis.init()
+print("Now here.")
 while True:
+    print("I get here a lot.")
     Jarvis.update()
