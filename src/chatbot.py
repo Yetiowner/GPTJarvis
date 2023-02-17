@@ -4,24 +4,15 @@ from typing import Union, Optional, Callable, List
 import types
 import openai
 import requests
-print("fdsafdsadfsa1")
 import GPTJarvis.src.extracttxt as extracttxt
-print("fdsafdsadfsa2")
 import re
 import time
-print("fdsafdsadfsa7")
 from bs4 import BeautifulSoup
-print("fdsafdsadfsa6")
-print("fdsafdsadfsa3")
 import pandas as pd
 import numpy as np
 import json
-print("fdsafdsadfsa4")
 from GPTJarvis.src.utils import loadPrompt
-print("fdsafdsadfsa5")
 import GPTJarvis.src.personalities as personalities
-print("fdsafdsadfsa6")
-print(69420)
 
 MODEL = "text-davinci-003"
 PERMANENTINFO = loadPrompt("PermanentInfo.txt")
@@ -100,7 +91,6 @@ class ChatBot():
         with open(FILEPATH+"usage.log", "a") as file:
             file.write("--------------------\n")
 
-        timex = time.time()
 
         noReadableReloadRequired = self.getEmbeddingReloadRequired(self.readables, "reads")
         noRunnableReloadRequired = self.getEmbeddingReloadRequired(self.functions, "functions")
@@ -117,7 +107,6 @@ class ChatBot():
             self.makeFunctionQueryEmbedding()
             self.embeddedfunction = self.loadFunctionQueryEmbedding()
         
-        print(time.time()-timex, "fdsafdsa")
     
     def getEmbeddingReloadRequired(self, accessibles, name):
         realreadables = [i.showFunction() for i in accessibles]
@@ -267,6 +256,7 @@ class ChatBot():
 
     def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
+
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
         df = df[df['similarities'] > 0.65]
         print(df)
@@ -282,7 +272,6 @@ class ChatBot():
             readablenums.append(readablenum)
         readables = "\n".join(readables)
 
-        embedding = get_embedding(prompt, model='text-embedding-ada-002')
         df1['similarities'] = df1.embedding.apply(lambda x: cosine_similarity(x, embedding))
         df1 = df1[df1['similarities'] > 0.65]
         print(df1)

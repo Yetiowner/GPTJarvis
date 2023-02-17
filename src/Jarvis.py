@@ -1,34 +1,26 @@
 from typing import *
 import inspect
-print(4)
 import os
 from os import listdir
 from os.path import isfile, join
 import subprocess
 from subprocess import PIPE
-print(3)
 import sys
 import time
 import threading
 import types
 from contextlib import redirect_stdout
 import shutil
-print(2)
 import GPTJarvis.src.voicebox as voicebox
-print(6)
 import GPTJarvis.src.chatbot as chatbot
-print(7)
 import GPTJarvis.src.personalities as personalities
-print(8)
 import ctypes
-print(1)
 
 #TODO: add long term memory
 #TODO: add folder scopes
 #TODO: add perma function wrapper
 #TODO: add function chaining
 #TODO: add true automation E.g. using @Jarvis.listener
-#TODO: make noReadableReloadRequired to save time
 
 functionlist = []
 opqueue = []
@@ -92,18 +84,14 @@ def setKey(key):
   chatbot.apikey = key
 
 def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 900, personality = personalities.JARVIS):
-  timex = time.time()
-  timey = time.time()
   if type(scope) == str:
     scope = [scope]
 
-  print(time.time()-timex)
   allaccessible = []
   for item in scope:
     if item == "folder":
-      frame = inspect.stack()[1]
-      module = inspect.getmodule(frame[0])
-      filename = module.__file__
+      frame = inspect.currentframe().f_back
+      filename = inspect.getframeinfo(frame)[0]
       dirname = os.path.dirname(filename)
       onlyfiles = [dirname + ("\\" if "\\" in filename else "/") + f for f in listdir(dirname) if isfile(join(dirname, f)) and os.path.splitext(f)[1] == ".py"]
       onlyfiles.remove(filename)
@@ -112,7 +100,6 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
       accessablefiles = item
     allaccessible.extend(accessablefiles)
   accessablefiles = allaccessible
-  print(time.time()-timex)
 
 
   if openai_key:
@@ -129,14 +116,12 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
     os.mkdir(FILEPATH)
     makeHidden(FILEPATH)
 
-  print(time.time()-timex)
 
 
   processes = []
   for file in accessablefiles:
     processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
   
-  print(time.time()-timex, "fdsa")
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
   allvariables = []
   functon_process_relationship = []
@@ -159,7 +144,6 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
             break
     allvariables.append(processvariables)
   
-  print(time.time()-timex)
 
   functions = []
   readables = []
@@ -173,10 +157,8 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
   
   chosenchatbot = chatbot.ChatBot(functions, readables, info, sampleCount = sampleCount, personality = personality)
 
-  print(time.time()-timex)
 
   startStreamingOutput()
-  print(time.time()-timey)
 
   runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality)
   

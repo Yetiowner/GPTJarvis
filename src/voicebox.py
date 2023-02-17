@@ -2,19 +2,12 @@ from urllib.parse import quote
 import requests
 import os
 import time
-print(51)
 import GPTJarvis.src.personalities as personalities
-print(61)
 from pydub import AudioSegment # Install ffmpeg exes and add to path
-print(71)
 import soundfile as sf
-print(81)
 import pyrubberband as pyrb # https://breakfastquay.com/rubberband/index.html Install CLU and add to path
-print(91)
 import subprocess
-print(101)
 from pydub.playback import play
-print(111)
 
 
 TEXT = "text"
