@@ -4,19 +4,24 @@ from typing import Union, Optional, Callable, List
 import types
 import openai
 import requests
+print("fdsafdsadfsa1")
 import GPTJarvis.src.extracttxt as extracttxt
+print("fdsafdsadfsa2")
 import re
 import time
+print("fdsafdsadfsa7")
 from bs4 import BeautifulSoup
-from openai.embeddings_utils import cosine_similarity
+print("fdsafdsadfsa6")
+print("fdsafdsadfsa3")
 import pandas as pd
 import numpy as np
 import json
-import inspect
+print("fdsafdsadfsa4")
 from GPTJarvis.src.utils import loadPrompt
+print("fdsafdsadfsa5")
 import GPTJarvis.src.personalities as personalities
-import sys
-
+print("fdsafdsadfsa6")
+print(69420)
 
 MODEL = "text-davinci-003"
 PERMANENTINFO = loadPrompt("PermanentInfo.txt")
@@ -74,7 +79,7 @@ class Function():
 
 
 class ChatBot():
-    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3, personality = personalities.JARVIS):
+    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3, personality = personalities.JARVIS, maxhistorylength = 3):
         self.functions = functions
         self.readables = readables
         for index, function in enumerate(self.functions):
@@ -84,30 +89,43 @@ class ChatBot():
             readable.number = index + 1
             readable.mode = "R"
         self.originalinfo = PERMANENTINFO + "\n\n\n" + info
-        self.info = self.genInfoText()
+        self.info = self.genInfoText() # Information including previous accessor/func calls
         self.tempinfo = ""
-        self.requesthistory = ""
+        self.requesthistory = []
         self.temphistory = ""
+        self.maxhistorylength = maxhistorylength
         self.sampleCount = sampleCount
         self.personality = personality
         openai.api_key = apikey
         with open(FILEPATH+"usage.log", "a") as file:
             file.write("--------------------\n")
 
-        try:
-            int("asdf")
+        timex = time.time()
+
+        noReadableReloadRequired = self.getEmbeddingReloadRequired(self.readables, "reads")
+        noRunnableReloadRequired = self.getEmbeddingReloadRequired(self.functions, "functions")
+
+        if noReadableReloadRequired:
             self.embeddedread = self.loadReadableQueryEmbedding()
-        except:
+        else:
             self.makeReadableQueryEmbedding()
             self.embeddedread = self.loadReadableQueryEmbedding()
 
-        try:
-            int("asdf")
+        if noRunnableReloadRequired:
             self.embeddedfunction = self.loadFunctionQueryEmbedding()
-        except:
+        else:
             self.makeFunctionQueryEmbedding()
             self.embeddedfunction = self.loadFunctionQueryEmbedding()
+        
+        print(time.time()-timex, "fdsafdsa")
     
+    def getEmbeddingReloadRequired(self, accessibles, name):
+        realreadables = [i.showFunction() for i in accessibles]
+        df = pd.read_csv(FILEPATH+f'embedded_{name}.csv')
+        realreadablesfromdf = df["items"].values.tolist()
+        noReadableReloadRequired = (realreadables == realreadablesfromdf)
+        return noReadableReloadRequired
+
     def genInfoText(self):
         out = ""
         if self.originalinfo:
@@ -184,16 +202,23 @@ class ChatBot():
         self.temphistory += info + "\n"
     
     def addHistory(self):
-        self.requesthistory += self.temphistory
-        self.requesthistory += "\n"
+        self.requesthistory.append(self.temphistory)
+        if len(self.requesthistory) > self.maxhistorylength:
+            self.commitToLTM(self.requesthistory.pop(0), mode="history")
         self.temphistory = ""
     
     def breakConversation(self):
+        self.commitToLTM(self.info, mode="info")
+        self.commitToLTM(self.requesthistory, mode="history")
         self.info = self.genInfoText()
-        self.requesthistory = ""
+        self.requesthistory = []
         self.temphistory = ""
         self.tempinfo = ""
     
+    def commitToLTM(self, info, mode=None):
+        #TODO
+        pass
+
     def followThroughInformation(self, information, question):
         analysis = self.generateAnalysisText(information, question)
         print(analysis+"\n=======================")
@@ -274,7 +299,7 @@ class ChatBot():
             print(newres[-1])
         funcs = "\n".join(funcs)
 
-        text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, readables, funcs, self.requesthistory, prompt)
+        text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, readables, funcs, "\n".join(self.requesthistory), prompt)
         return text, readablenums, funcnums
 
 
@@ -344,7 +369,7 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, self.requesthistory, question, data)
+        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, "\n".join(self.requesthistory), question, data)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
@@ -480,6 +505,8 @@ def init_browser():
     options.binary_location = r'C:\Program Files\Mozilla Firefox\firefox.exe'
     browser = webdriver.Firefox(options=options)
 
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
 

@@ -4,6 +4,9 @@ from openmeteo_py import Hourly,Daily,Options,OWmanager
 import pathlib
 import jellyfish
 import glob
+from serpapi import GoogleSearch
+import json
+from contextlib import redirect_stdout
 
 
 @Jarvis.readable
@@ -57,6 +60,23 @@ def find_files(filename, search_path):
 
     results = [[f, jellyfish.jaro_distance(os.path.splitext(os.path.basename(f))[0], filename)] for f in results]
     return results
+
+@Jarvis.readable
+def googleSearch(string):
+    """Searches the string on google, and returns the first result as a string. Use this if you want to look up information on the internet, or if I ask you for information that can be looked up."""
+    with open("keys.json", "r") as file:
+        keys = json.load(file)
+    params = {
+      "api_key": keys["Google"],
+      "engine": "google",
+      "q": string,
+      "hl": "en",
+    }
+    search = GoogleSearch(params)
+    
+    with redirect_stdout(None):
+        results = search.get_dict()
+    return "\n".join([results['organic_results'][i]['snippet'] for i in range(3)])
 
 Jarvis.init()
 while True:

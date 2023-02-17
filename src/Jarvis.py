@@ -1,26 +1,34 @@
 from typing import *
 import inspect
+print(4)
 import os
 from os import listdir
 from os.path import isfile, join
 import subprocess
 from subprocess import PIPE
+print(3)
 import sys
 import time
 import threading
 import types
 from contextlib import redirect_stdout
 import shutil
+print(2)
 import GPTJarvis.src.voicebox as voicebox
+print(6)
 import GPTJarvis.src.chatbot as chatbot
+print(7)
 import GPTJarvis.src.personalities as personalities
+print(8)
 import ctypes
+print(1)
 
 #TODO: add long term memory
-#TODO: add forgetfullness
 #TODO: add folder scopes
-#TODO: add perma functio wrapper
-#TODO: disable the single stage double type bug e.g. R getWeather(40.073773,-82.989133) The current weather at 40.073773, -82.989133 is overcast with a temperature of -3.3°C, Sir.
+#TODO: add perma function wrapper
+#TODO: add function chaining
+#TODO: add true automation E.g. using @Jarvis.listener
+#TODO: make noReadableReloadRequired to save time
 
 functionlist = []
 opqueue = []
@@ -84,10 +92,12 @@ def setKey(key):
   chatbot.apikey = key
 
 def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 900, personality = personalities.JARVIS):
-
+  timex = time.time()
+  timey = time.time()
   if type(scope) == str:
     scope = [scope]
 
+  print(time.time()-timex)
   allaccessible = []
   for item in scope:
     if item == "folder":
@@ -102,6 +112,7 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
       accessablefiles = item
     allaccessible.extend(accessablefiles)
   accessablefiles = allaccessible
+  print(time.time()-timex)
 
 
   if openai_key:
@@ -118,11 +129,14 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
     os.mkdir(FILEPATH)
     makeHidden(FILEPATH)
 
+  print(time.time()-timex)
+
 
   processes = []
   for file in accessablefiles:
     processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
   
+  print(time.time()-timex, "fdsa")
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
   allvariables = []
   functon_process_relationship = []
@@ -145,6 +159,8 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
             break
     allvariables.append(processvariables)
   
+  print(time.time()-timex)
+
   functions = []
   readables = []
   for modulefuncs in allvariables:
@@ -157,7 +173,10 @@ def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key =
   
   chosenchatbot = chatbot.ChatBot(functions, readables, info, sampleCount = sampleCount, personality = personality)
 
+  print(time.time()-timex)
+
   startStreamingOutput()
+  print(time.time()-timey)
 
   runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality)
   
@@ -257,26 +276,28 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
         validoutput = True
     #chosenchatbot.register_addHistory(f"Me: {string}\n{chosentype} {thingtorun}")
     if result[0].mode == "R":
-      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
+      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
+      explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
 
       chosenchatbot.register_addInfo(explainedOutput)
       chosenchatbot.addInfo()
 
       chosenchatbot.register_addHistory(explainedOutput)
-      textResult = chosenchatbot.followThroughInformation(explainedOutput + f" Where {result[0].showFunction()}", string)
+      textResult = chosenchatbot.followThroughInformation(explainedOutputFull + f" Where {result[0].showFunction()}", string)
       chosenchatbot.register_addHistory(f"You: {textResult}")
       chosenchatbot.addHistory()
       #chosenchatbot.register_addInfo(f"Your response: {textResult}")
       #chosenchatbot.addInfo()
       return textResult
-    chosenchatbot.addHistory()
+    #chosenchatbot.addHistory()
     if result[0].mode == "F":
-      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
+      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
+      explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
       chosenchatbot.register_addInfo(explainedOutput)
       chosenchatbot.addInfo()
 
       chosenchatbot.register_addHistory(explainedOutput)
-      textResult = chosenchatbot.followThroughInformation(explainedOutput + f" Where {result[0].showFunction()}", string)
+      textResult = chosenchatbot.followThroughInformation(explainedOutputFull + f" Where {result[0].showFunction()}", string)
       chosenchatbot.register_addHistory(f"You: {textResult}")
       chosenchatbot.addHistory()
       return textResult
