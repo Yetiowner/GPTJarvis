@@ -83,22 +83,35 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "folder", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 900, personality = personalities.JARVIS):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 900, personality = personalities.JARVIS):
   if type(scope) == str:
     scope = [scope]
 
+  frame = inspect.currentframe().f_back
+  filename = inspect.getframeinfo(frame)[0]
+  dirname = os.path.dirname(filename)
+
   allaccessible = []
   for item in scope:
-    if item == "folder":
-      frame = inspect.currentframe().f_back
-      filename = inspect.getframeinfo(frame)[0]
-      dirname = os.path.dirname(filename)
-      onlyfiles = [dirname + ("\\" if "\\" in filename else "/") + f for f in listdir(dirname) if isfile(join(dirname, f)) and os.path.splitext(f)[1] == ".py"]
-      onlyfiles.remove(filename)
+    joinedItemName = os.path.join(dirname, item)
+    if os.path.isdir(joinedItemName):
+      onlyfiles = [os.path.join(joinedItemName, f) for f in listdir(joinedItemName) if isfile(join(joinedItemName, f)) and os.path.splitext(f)[1] == ".py"]
+      if filename in onlyfiles:
+        onlyfiles.remove(filename)
       accessablefiles = onlyfiles
+    elif os.path.isfile(joinedItemName):
+      accessablefiles = [joinedItemName]
+    elif os.path.isdir(item):
+      onlyfiles = [os.path.join(item, f) for f in listdir(item) if isfile(join(item, f)) and os.path.splitext(f)[1] == ".py"]
+      if filename in onlyfiles:
+        onlyfiles.remove(filename)
+      accessablefiles = onlyfiles
+    elif os.path.isfile(item):
+      accessablefiles = [item]
     else:
-      accessablefiles = item
+      raise FileNotFoundError
     allaccessible.extend(accessablefiles)
+
   accessablefiles = allaccessible
 
 

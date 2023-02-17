@@ -1,14 +1,7 @@
 secret.txt
 __pycache__/
-chromedriver.exe
 *.log
-geckodriver.exe
-usage.log
-out.txt
-keys.json
+/keys.json
 *.csv
 aditionalInfo.txt
-filetext.txt
-streamedFileOutput/
-voiceclip.mp3
 .Jarvis/
