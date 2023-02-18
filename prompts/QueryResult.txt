@@ -26,7 +26,7 @@ Here is a list of functions that can perform an action: {}
 Previous results: (
 {})
 
-Only pick one of the accessors or the functions I gave you above, or pick one from the previous results, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply "N" followed by your response as the character I told you to be. Answer questions using information from previous results.
+Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, making sure you fill in all the parameters, or if neither work, just reply "N" followed by your response as the character I told you to be. Answer questions using information from previous results.
 
 My query: {}
 Your response: 

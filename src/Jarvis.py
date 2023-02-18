@@ -17,7 +17,6 @@ import GPTJarvis.src.personalities as personalities
 import ctypes
 
 #TODO: add long term memory
-#TODO: add folder scopes
 #TODO: add perma function wrapper
 #TODO: add function chaining
 #TODO: add true automation E.g. using @Jarvis.listener
