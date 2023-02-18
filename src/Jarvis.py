@@ -15,9 +15,9 @@ import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
 import GPTJarvis.src.personalities as personalities
 import ctypes
+import functools
 
 #TODO: add long term memory
-#TODO: add perma function wrapper
 #TODO: add function chaining
 #TODO: add true automation E.g. using @Jarvis.listener
 
@@ -30,8 +30,18 @@ UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
 chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
+def priority(func):
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    return func(*args, **kwargs)
+  
+  wrapper.priority = True
+  wrapper.func = func
+
+  return wrapper
 
 def runnable(func):
+  @functools.wraps(func)
   def wrapper(*args, **kwargs):
     return func(*args, **kwargs)
   
@@ -40,6 +50,7 @@ def runnable(func):
   return wrapper
 
 def readable(func):
+  @functools.wraps(func)
   def wrapper(*args, **kwargs):
     return func(*args, **kwargs)
   
@@ -92,11 +103,12 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
 
   allaccessible = []
   for item in scope:
+    item = item.rstrip("/").rstrip("\\").lstrip("/").lstrip("\\")
     joinedItemName = os.path.join(dirname, item)
     if os.path.isdir(joinedItemName):
-      onlyfiles = [os.path.join(joinedItemName, f) for f in listdir(joinedItemName) if isfile(join(joinedItemName, f)) and os.path.splitext(f)[1] == ".py"]
-      if filename in onlyfiles:
-        onlyfiles.remove(filename)
+      onlyfiles = [os.path.join(joinedItemName, f).replace("/", "\\") for f in listdir(joinedItemName) if isfile(join(joinedItemName, f)) and os.path.splitext(f)[1] == ".py"]
+      if filename.replace("/", "\\") in onlyfiles:
+        onlyfiles.remove(filename.replace("/", "\\"))
       accessablefiles = onlyfiles
     elif os.path.isfile(joinedItemName):
       accessablefiles = [joinedItemName]
@@ -113,7 +125,6 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
 
   accessablefiles = allaccessible
 
-
   if openai_key:
     chatbot.apikey = openai_key
 
@@ -129,11 +140,10 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     makeHidden(FILEPATH)
 
 
-
   processes = []
   for file in accessablefiles:
     processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
-  
+
   #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
   allvariables = []
   functon_process_relationship = []
@@ -155,7 +165,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
           if expectedcount == 0:
             break
     allvariables.append(processvariables)
-  
+
 
   functions = []
   readables = []
@@ -313,7 +323,8 @@ def init():
   frame = inspect.stack()[1]
   module = inspect.getmodule(frame[0])
   if "-JarvisSubprocess" not in sys.argv:
-    return
+    #return
+    pass
   diagnostics = []
   functions = [getattr(module, a) for a in dir(module) if isinstance(getattr(module, a), types.FunctionType)]
   diagnostics.append(functions)
@@ -336,7 +347,11 @@ def displayFunctions(functions):
   out = []
   for function in functions:
     func = function.func
-    out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__])
+    if getattr(function, "priority", False):
+      priority = True
+    else:
+      priority = False
+    out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
   print(UNLIKELYNAMESPACECOLLIDABLE + str(out))
   sys.stdout.flush()
   

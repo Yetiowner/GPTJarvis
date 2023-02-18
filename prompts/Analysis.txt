@@ -9,4 +9,4 @@ Previous results: (
 
 My query: {}
 {}
-Your response: 
+You: 

@@ -61,8 +61,9 @@ def find_files(filename, search_path):
     results = [[f, jellyfish.jaro_distance(os.path.splitext(os.path.basename(f))[0], filename)] for f in results]
     return results
 
+@Jarvis.priority
 @Jarvis.readable
-def googleSearch(string):
+def googleSearch(string: str):
     """Searches the string on google, and returns the first result as a string. Use this if you want to look up information on the internet, or if I ask you for information that can be looked up."""
     with open("keys.json", "r") as file:
         keys = json.load(file)

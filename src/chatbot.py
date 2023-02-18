@@ -45,13 +45,14 @@ class API():
         return f"API {self.number}: {self.link}"
 
 class Function():
-    def __init__(self, function: str, args=[], kwargs={}, typeannots={}, description=None):
+    def __init__(self, function: str, args=[], kwargs={}, typeannots={}, description=None, priority=False):
         self.function = function
         self.args = args
         self.kwargs = kwargs
         self.typeannots = typeannots
         self.description = description
         self.number = 0
+        self.priority = priority
         self.mode = None
     
     def showFunction(self):
@@ -92,16 +93,16 @@ class ChatBot():
             file.write("--------------------\n")
 
 
-        noReadableReloadRequired = self.getEmbeddingReloadRequired(self.readables, "reads")
-        noRunnableReloadRequired = self.getEmbeddingReloadRequired(self.functions, "functions")
+        readableReloadRequired = self.getEmbeddingReloadRequired(self.readables, "reads")
+        runnableReloadRequired = self.getEmbeddingReloadRequired(self.functions, "functions")
 
-        if noReadableReloadRequired:
+        if not readableReloadRequired:
             self.embeddedread = self.loadReadableQueryEmbedding()
         else:
             self.makeReadableQueryEmbedding()
             self.embeddedread = self.loadReadableQueryEmbedding()
 
-        if noRunnableReloadRequired:
+        if not runnableReloadRequired:
             self.embeddedfunction = self.loadFunctionQueryEmbedding()
         else:
             self.makeFunctionQueryEmbedding()
@@ -110,9 +111,12 @@ class ChatBot():
     
     def getEmbeddingReloadRequired(self, accessibles, name):
         realreadables = [i.showFunction() for i in accessibles]
-        df = pd.read_csv(FILEPATH+f'embedded_{name}.csv')
+        try:
+            df = pd.read_csv(FILEPATH+f'embedded_{name}.csv')
+        except FileNotFoundError:
+            return True
         realreadablesfromdf = df["items"].values.tolist()
-        noReadableReloadRequired = (realreadables == realreadablesfromdf)
+        noReadableReloadRequired = (realreadables != realreadablesfromdf)
         return noReadableReloadRequired
 
     def genInfoText(self):
@@ -136,7 +140,7 @@ class ChatBot():
         response = openai.Completion.create(
         engine=MODEL,
         prompt=textToQuery,
-        temperature=1.0,
+        temperature=0.5,
         max_tokens=512,
         top_p=1.0,
         frequency_penalty=0.0,
@@ -214,7 +218,7 @@ class ChatBot():
         response = openai.Completion.create(
         engine=MODEL,
         prompt=analysis,
-        temperature=1,
+        temperature=0.5,
         max_tokens=1024,
         top_p=1.0,
         frequency_penalty=0.0,
@@ -236,6 +240,7 @@ class ChatBot():
         df = pd.DataFrame(simplifiedreadables, columns=["simplified"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df["items"] = realreadables
+        df["priority"] = [i.priority for i in self.readables]
         df.to_csv(FILEPATH+'embedded_reads.csv', index=False)
     
 
@@ -252,40 +257,42 @@ class ChatBot():
         df = pd.DataFrame(simplifiedfunctions, columns=["simplified"])
         df["embedding"] = df.apply(lambda x: get_embedding_batch(x.tolist()))
         df["items"] = realfunctions
+        df["priority"] = [i.priority for i in self.functions]
         df.to_csv(FILEPATH+'embedded_functions.csv', index=False)
 
     def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
 
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        df_priority = df[df['priority'] == True]
         df = df[df['similarities'] > 0.65]
-        print(df)
-        result = df.sort_values('similarities', ascending=False).head(self.sampleCount)
+        result = df[df["priority"] == False].sort_values('similarities', ascending=False).head(self.sampleCount)
+        result = pd.concat([df_priority, result], axis=0)
         readables = []
         readablenums = []
         for index, res in result.iterrows():
             res = res.values
             newres = res
             readablenum = index+1
-            readable = newres[-2]
+            readable = newres[-3]
             readables.append(readable)
             readablenums.append(readablenum)
         readables = "\n".join(readables)
 
         df1['similarities'] = df1.embedding.apply(lambda x: cosine_similarity(x, embedding))
+        df1_priority = df1[df1['priority'] == True]
         df1 = df1[df1['similarities'] > 0.65]
-        print(df1)
-        result = df1.sort_values('similarities', ascending=False).head(self.sampleCount)
+        result = df1[df1["priority"] == False].sort_values('similarities', ascending=False).head(self.sampleCount)
+        result = pd.concat([df1_priority, result], axis=0)
         funcs = []
         funcnums = []
         for index, res in result.iterrows():
             res = res.values
             newres = res
             funcnum = index+1
-            func = newres[-2]
+            func = newres[-3]
             funcs.append(func)
             funcnums.append(funcnum)
-            print(newres[-1])
         funcs = "\n".join(funcs)
 
         text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, readables, funcs, "\n".join(self.requesthistory), prompt)
