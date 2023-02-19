@@ -71,7 +71,7 @@ class Function():
 
 
 class ChatBot():
-    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3, personality = personalities.JARVIS, maxhistorylength = 3):
+    def __init__(self, functions: List[Function] = [], readables: List[Function] = [], info = None, sampleCount = 3, minSimilarity = 0.6, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5):
         self.functions = functions
         self.readables = readables
         for index, function in enumerate(self.functions):
@@ -87,7 +87,9 @@ class ChatBot():
         self.temphistory = ""
         self.maxhistorylength = maxhistorylength
         self.sampleCount = sampleCount
+        self.minSimilarity = minSimilarity
         self.personality = personality
+        self.temperature = temperature
         openai.api_key = apikey
         with open(FILEPATH+"usage.log", "a") as file:
             file.write("--------------------\n")
@@ -140,7 +142,7 @@ class ChatBot():
         response = openai.Completion.create(
         engine=MODEL,
         prompt=textToQuery,
-        temperature=0.5,
+        temperature=self.temperature,
         max_tokens=512,
         top_p=1.0,
         frequency_penalty=0.0,
@@ -171,7 +173,6 @@ class ChatBot():
                 chosenfunc = self.getFuncFromNumber(functionnumber)
                 if chosenfunc.function == restofresponse.split("(")[0]:
                     funcnumber = functionnumber
-            print(funcnumber)
             chosenfunction = self.getFuncFromNumber(funcnumber)
             chosenfunctiontorun = restofresponse
             response = [chosenfunction, chosenfunctiontorun]
@@ -218,7 +219,7 @@ class ChatBot():
         response = openai.Completion.create(
         engine=MODEL,
         prompt=analysis,
-        temperature=0.5,
+        temperature=self.temperature,
         max_tokens=1024,
         top_p=1.0,
         frequency_penalty=0.0,
@@ -265,7 +266,7 @@ class ChatBot():
 
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
         df_priority = df[df['priority'] == True]
-        df = df[df['similarities'] > 0.65]
+        df = df[df['similarities'] >= self.minSimilarity]
         result = df[df["priority"] == False].sort_values('similarities', ascending=False).head(self.sampleCount)
         result = pd.concat([df_priority, result], axis=0)
         readables = []
@@ -281,7 +282,7 @@ class ChatBot():
 
         df1['similarities'] = df1.embedding.apply(lambda x: cosine_similarity(x, embedding))
         df1_priority = df1[df1['priority'] == True]
-        df1 = df1[df1['similarities'] > 0.65]
+        df1 = df1[df1['similarities'] >= self.minSimilarity]
         result = df1[df1["priority"] == False].sort_values('similarities', ascending=False).head(self.sampleCount)
         result = pd.concat([df1_priority, result], axis=0)
         funcs = []

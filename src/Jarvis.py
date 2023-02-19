@@ -30,6 +30,11 @@ UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
 chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
+TEXT2TEXT = "T2T"
+SPEECH2SPEECH = "S2S"
+TEXT2SPEECH = "T2S"
+SPEECH2TEXT = "S2T"
+
 def priority(func):
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
@@ -93,7 +98,7 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, memory_retention_time = 900, personality = personalities.JARVIS):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = SPEECH2SPEECH):
   if type(scope) == str:
     scope = [scope]
 
@@ -177,12 +182,12 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     for i in modulereadables:
       readables.append(i)
   
-  chosenchatbot = chatbot.ChatBot(functions, readables, info, sampleCount = sampleCount, personality = personality)
+  chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
 
 
   startStreamingOutput()
 
-  runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality)
+  runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality, mode)
   
 def makeHidden(path):
   FILE_ATTRIBUTE_HIDDEN = 0x02
@@ -218,21 +223,24 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time, personality):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time, personality, mode):
   """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
   createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
   #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
   #voicebox.say(ans)
   #chosenchatbot.breakConversation()
+  inmode = mode[0]
+  outmode = mode[2]
+  print("Ready")
   while True:
     startWaitingTime = time.time()
-    qText = input("Enter a query: ")
+    qText = voicebox.listen(mode = inmode)
     timeTaken = time.time()-startWaitingTime
     if timeTaken > memory_retention_time:
       print("Breaking conversation.")
       chosenchatbot.breakConversation()
     ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, processes)
-    voicebox.say(ans1, personality=personality)
+    voicebox.say(ans1, mode = outmode, personality = personality)
   """print("\n\n")
   ans1_2 = createQuery("Is this suitable for ice cream?", chosenchatbot, functon_process_relationship, processes)
   voicebox.say(ans1_2)

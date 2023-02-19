@@ -8,18 +8,21 @@ import soundfile as sf
 import pyrubberband as pyrb # https://breakfastquay.com/rubberband/index.html Install CLU and add to path
 import subprocess
 from pydub.playback import play
+import speech_recognition as sr
+import io
+import keyboard
 
 
-TEXT = "text"
-VOICE = "voice"
-MODE = VOICE
 FILEPATH = ".Jarvis/"
+FORGETISTALKINGCUTTOFFTIME = 30
+HOTKEY = "alt+j"
 
-def say(text, mode=MODE, personality=personalities.JARVIS):
-  pass
-  if mode == TEXT:
+def say(text, mode="S", personality=personalities.JARVIS):
+  if mode == "T":
     print(text)
-  elif mode == VOICE:
+
+  elif mode == "S":
+
     url = f"https://api.streamelements.com/kappa/v2/speech?voice={personality.voice}&text={quote(text)}" # thx to https://github.com/styler for API
     data = requests.get(url).content
     try:
@@ -29,17 +32,15 @@ def say(text, mode=MODE, personality=personalities.JARVIS):
     with open(FILEPATH+'voiceclip.mp3', 'wb') as f:
       f.write(data)
       
-    #print(time.time()-timex)
     subprocess.run(["ffmpeg", "-y", "-i",  f"{FILEPATH}voiceclip.mp3", "-speed", "16", f"{FILEPATH}file.wav", "-hide_banner", "-loglevel", "error"])
-    #print(time.time()-timex)
     data, samplerate = sf.read(FILEPATH+"file.wav")
     y_stretch = pyrb.time_stretch(data, samplerate, personality.speed)
     y_shift = pyrb.pitch_shift(y_stretch, samplerate, personality.pitch)
     sf.write(FILEPATH+"outputfile1X5.wav", y_shift, samplerate, format='wav')
-    #print(time.time()-timex)
     song = AudioSegment.from_wav(FILEPATH+"outputfile1X5.wav")
-    #print(time.time()-timex)
+
     play(song)
+
     try:
       os.remove(f"{FILEPATH}outputfile1X5.wav")
     except FileNotFoundError:
@@ -55,14 +56,63 @@ def say(text, mode=MODE, personality=personalities.JARVIS):
     except FileNotFoundError:
       pass
 
-"""recog = sr.Recognizer()
-with sr.Microphone() as source2:
-  recog.adjust_for_ambient_noise(source2, duration=0.5)
-  #recog.pause_threshold = 0.4
-  #recog.phrase_threshold = 0.1
-  #recog.non_speaking_duration = 0.1
-  print("ready")
-  audio2 = recog.listen(source2)
-  print("ready1")
-  text = recog.recognize_google(audio2, show_all=False, language="en-GB")
-  print(text)"""
+
+def listen(mode="S"):
+  if mode == "T":
+    return input("Enter a query: ")
+  elif mode == "S":
+    return startListening()
+
+
+def awaitHotkeyPress():
+  global triggered
+  triggered = False
+  while not triggered:
+    pass
+  triggered = False
+
+def checkHotkeyRelease():
+  for part in HOTKEY.split("+"):
+    if not keyboard.is_pressed(part):
+      return True
+  return False
+
+def startListening():
+    global stop
+    recog = sr.Recognizer()
+    #print(sr.Microphone.list_microphone_names())
+    with sr.Microphone(device_index=3) as source:
+      recog.adjust_for_ambient_noise(source, duration=0.5)
+
+      awaitHotkeyPress()
+    
+      frames = io.BytesIO()
+      stop = False
+      while stop == False:
+          if checkHotkeyRelease():
+            break
+
+          buffer = source.stream.read(source.CHUNK)
+          if len(buffer) == 0:
+            break
+
+          frames.write(buffer)
+
+      frame_data = frames.getvalue()
+      frames.close()
+      audio2 = sr.AudioData(frame_data, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
+
+    text = recog.recognize_google(audio2, show_all=True, with_confidence=True)#, language="en-GB")
+    choices = [text["alternative"][i]["transcript"] for i in range(len(text["alternative"]))]
+    truetext = choices[0]
+    
+    return truetext
+
+def setHotkeyTriggered():
+  global triggered
+  triggered = True
+
+keyboard.add_hotkey(HOTKEY, setHotkeyTriggered)
+
+if __name__ == "__main__":
+  print(listen(mode="S"))
