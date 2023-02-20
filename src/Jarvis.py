@@ -35,6 +35,9 @@ SPEECH2SPEECH = "S2S"
 TEXT2SPEECH = "T2S"
 SPEECH2TEXT = "S2T"
 
+SYNC = "s"
+ASYNC = "a"
+
 def priority(func):
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
@@ -98,7 +101,7 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = SPEECH2SPEECH):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = SPEECH2SPEECH, syncmode = SYNC):
   if type(scope) == str:
     scope = [scope]
 
@@ -144,50 +147,50 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     os.mkdir(FILEPATH)
     makeHidden(FILEPATH)
 
+  if syncmode == ASYNC:
+    processes = []
+    for file in accessablefiles:
+      processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
 
-  processes = []
-  for file in accessablefiles:
-    processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
-
-  #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
-  allvariables = []
-  functon_process_relationship = []
-  for p in processes:
-    processvariables = []
-    expectedcount = 2
-    for i in iter(p.stdout.readline, ""):
-      if i:
-        if i.startswith(UNLIKELYNAMESPACECOLLIDABLE):
-          i = i[len(UNLIKELYNAMESPACECOLLIDABLE):]
-          expectedcount -= 1
-          evalled = eval(i)
-          funced = []
-          for evalledfunc in evalled:
-            funced.append(chatbot.Function(*evalledfunc))
-          for func in funced:
-            functon_process_relationship.append([func, p])
-          processvariables.append(funced)
-          if expectedcount == 0:
-            break
-    allvariables.append(processvariables)
-
-
-  functions = []
-  readables = []
-  for modulefuncs in allvariables:
-    modulefunctions = modulefuncs[0]
-    modulereadables = modulefuncs[1]
-    for i in modulefunctions:
-      functions.append(i)
-    for i in modulereadables:
-      readables.append(i)
-  
-  chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
+    #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
+    allvariables = []
+    functon_process_relationship = []
+    for p in processes:
+      processvariables = []
+      expectedcount = 2
+      for i in iter(p.stdout.readline, ""):
+        if i:
+          if i.startswith(UNLIKELYNAMESPACECOLLIDABLE):
+            i = i[len(UNLIKELYNAMESPACECOLLIDABLE):]
+            expectedcount -= 1
+            evalled = eval(i)
+            funced = []
+            for evalledfunc in evalled:
+              funced.append(chatbot.Function(*evalledfunc))
+            for func in funced:
+              functon_process_relationship.append([func, p])
+            processvariables.append(funced)
+            if expectedcount == 0:
+              break
+      allvariables.append(processvariables)
 
 
-  startStreamingOutput()
+    functions = []
+    readables = []
+    for modulefuncs in allvariables:
+      modulefunctions = modulefuncs[0]
+      modulereadables = modulefuncs[1]
+      for i in modulefunctions:
+        functions.append(i)
+      for i in modulereadables:
+        readables.append(i)
+    
+    chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
 
-  runProcessMainloop(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality, mode)
+
+    startStreamingOutput()
+
+    runProcessMainloopAsync(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality, mode)
   
 def makeHidden(path):
   FILE_ATTRIBUTE_HIDDEN = 0x02
@@ -223,7 +226,7 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time, personality, mode):
+def runProcessMainloopAsync(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time, personality, mode):
   """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
   createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
   #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
