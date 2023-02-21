@@ -14,6 +14,3 @@ client = wolframalpha.Client(app_id)
 def sayHelloWorld():
   """Prints out hello world"""
   print("Hello world!")
-
-
-Jarvis.init()

@@ -78,5 +78,3 @@ def googleSearch(string: str):
     with redirect_stdout(None):
         results = search.get_dict()
     return "\n".join([results['organic_results'][i]['snippet'] for i in range(3)])
-
-Jarvis.init()

@@ -39,5 +39,3 @@ def getTimeAndDate():
 def foo(a):
     """Bar"""
     return "baz"
-
-Jarvis.init()

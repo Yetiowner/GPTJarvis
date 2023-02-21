@@ -16,6 +16,8 @@ import GPTJarvis.src.chatbot as chatbot
 import GPTJarvis.src.personalities as personalities
 import ctypes
 import functools
+import importlib.util
+import sys
 
 #TODO: add long term memory
 #TODO: add function chaining
@@ -190,7 +192,63 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
 
     startStreamingOutput()
 
-    runProcessMainloopAsync(chosenchatbot, functon_process_relationship, processes, memory_retention_time, personality, mode)
+    runProcessMainloop(chosenchatbot, functon_process_relationship, memory_retention_time, personality, mode, syncmode=syncmode)
+  
+  else:
+    functon_module_relationship = []
+    allvariables = []
+
+    for index, file in enumerate(accessablefiles):
+      modulevariables = []
+      spec = importlib.util.spec_from_file_location(f"module.name{index}", file)
+      module = importlib.util.module_from_spec(spec)
+      sys.modules[f"module.name{index}"] = module
+      spec.loader.exec_module(module)
+
+      functions = [getattr(module, a) for a in dir(module) if isinstance(getattr(module, a), types.FunctionType)]
+      readables = []
+      runnables = []
+      for item in functions:
+        if getattr(item, "runnable", False):
+          runnables.append(item)
+        if getattr(item, "readable", False):
+          readables.append(item)
+      
+      for functype in [runnables, readables]:
+        out = []
+        for function in functype:
+          func = function.func
+          if getattr(function, "priority", False):
+            priority = True
+          else:
+            priority = False
+          out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+
+        funced = []
+        for func in out:
+          funced.append(chatbot.Function(*func))
+        for func in funced:
+          functon_module_relationship.append([func, module])
+        modulevariables.append(funced)
+      
+      allvariables.append(modulevariables)
+    
+    functions = []
+    readables = []
+    for modulefuncs in allvariables:
+      modulefunctions = modulefuncs[0]
+      modulereadables = modulefuncs[1]
+      for i in modulefunctions:
+        functions.append(i)
+      for i in modulereadables:
+        readables.append(i)
+    
+    chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
+
+    runProcessMainloop(chosenchatbot, functon_module_relationship, memory_retention_time, personality, mode, syncmode=syncmode)
+    
+
+
   
 def makeHidden(path):
   FILE_ATTRIBUTE_HIDDEN = 0x02
@@ -226,7 +284,7 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloopAsync(chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes, memory_retention_time, personality, mode):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, memory_retention_time, personality, mode, syncmode=SYNC):
   """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
   createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
   #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
@@ -242,7 +300,7 @@ def runProcessMainloopAsync(chosenchatbot: chatbot.ChatBot, functon_process_rela
     if timeTaken > memory_retention_time:
       print("Breaking conversation.")
       chosenchatbot.breakConversation()
-    ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, processes)
+    ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, syncmode)
     voicebox.say(ans1, mode = outmode, personality = personality)
   """print("\n\n")
   ans1_2 = createQuery("Is this suitable for ice cream?", chosenchatbot, functon_process_relationship, processes)
@@ -256,7 +314,7 @@ def runProcessMainloopAsync(chosenchatbot: chatbot.ChatBot, functon_process_rela
   #createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
-def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, processes):
+def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, syncmode):
   chosentype, result = chosenchatbot.query(string)
   print(result)
   chosenchatbot.register_addHistory(f"My query: {string}")
@@ -279,16 +337,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
       chosenchatbot.addHistory()
       return result
 
-    chosenprocess.stdin.write(thingtorun+"\n")
-    chosenprocess.stdin.flush()
-    validoutput = False
-    while not(validoutput):
-      output = chosenprocess.stdout.readline()
-      if output.startswith(UNLIKELYNAMESPACECOLLIDABLE1):
-        output = list(eval(output[len(UNLIKELYNAMESPACECOLLIDABLE1):]))
-        output = bytes(output).decode("utf-8")
-        output = output.strip()
-        validoutput = True
+    output = sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode)
+
     #chosenchatbot.register_addHistory(f"Me: {string}\n{chosentype} {thingtorun}")
     if result[0].mode == "R":
       explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
@@ -319,6 +369,29 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
     #print(chosenprocess)
     #print(thingtorun)
 
+
+def sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode):
+  if syncmode == ASYNC:
+    chosenprocess.stdin.write(thingtorun+"\n")
+    chosenprocess.stdin.flush()
+    validoutput = False
+    while not(validoutput):
+      output = chosenprocess.stdout.readline()
+      if output.startswith(UNLIKELYNAMESPACECOLLIDABLE1):
+        output = list(eval(output[len(UNLIKELYNAMESPACECOLLIDABLE1):]))
+        output = bytes(output).decode("utf-8")
+        output = output.strip()
+        validoutput = True
+  else:
+    try:
+      localscopy = locals()
+      result = eval(f"chosenprocess.{thingtorun}", localscopy)
+      if result == None:
+        result = "Success!"
+    except Exception as e:
+      result = str(e)
+    output = result
+  return output
 
 def listenForRunCommand():
   global opqueue

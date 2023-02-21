@@ -68,7 +68,7 @@ def awaitHotkeyPress():
   global triggered
   triggered = False
   while not triggered:
-    pass
+    time.sleep(0.1)
   triggered = False
 
 def checkHotkeyRelease():
@@ -81,6 +81,7 @@ def startListening():
     global stop
     recog = sr.Recognizer()
     #print(sr.Microphone.list_microphone_names())
+    lastHotkeyPoll = time.time()
     with sr.Microphone(device_index=3) as source:
       recog.adjust_for_ambient_noise(source, duration=0.5)
 
@@ -89,8 +90,10 @@ def startListening():
       frames = io.BytesIO()
       stop = False
       while stop == False:
-          if checkHotkeyRelease():
-            break
+          if time.time()-lastHotkeyPoll > 1:
+            if checkHotkeyRelease():
+              break
+            lastHotkeyPoll = time.time()
 
           buffer = source.stream.read(source.CHUNK)
           if len(buffer) == 0:
@@ -113,6 +116,3 @@ def setHotkeyTriggered():
   triggered = True
 
 keyboard.add_hotkey(HOTKEY, setHotkeyTriggered)
-
-if __name__ == "__main__":
-  print(listen(mode="S"))

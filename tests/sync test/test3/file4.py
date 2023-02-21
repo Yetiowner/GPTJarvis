@@ -31,5 +31,3 @@ def submit():
   val = heightvar.get()
     
   root.destroy()
-
-Jarvis.init()
