@@ -14,7 +14,6 @@ import keyboard
 
 
 FILEPATH = ".Jarvis/"
-FORGETISTALKINGCUTTOFFTIME = 30
 HOTKEY = "alt+j"
 
 def say(text, mode="S", personality=personalities.JARVIS):
@@ -79,10 +78,15 @@ def checkHotkeyRelease():
 
 def startListening():
     global stop
+    try:
+      keyboard.clear_all_hotkeys()
+    except AttributeError:
+      pass
+    keyboard.add_hotkey(HOTKEY, setHotkeyTriggered)
     recog = sr.Recognizer()
     #print(sr.Microphone.list_microphone_names())
     lastHotkeyPoll = time.time()
-    with sr.Microphone(device_index=3) as source:
+    with sr.Microphone() as source:
       recog.adjust_for_ambient_noise(source, duration=0.5)
 
       awaitHotkeyPress()
@@ -90,7 +94,7 @@ def startListening():
       frames = io.BytesIO()
       stop = False
       while stop == False:
-          if time.time()-lastHotkeyPoll > 1:
+          if time.time()-lastHotkeyPoll > 0.2:
             if checkHotkeyRelease():
               break
             lastHotkeyPoll = time.time()
@@ -114,5 +118,3 @@ def startListening():
 def setHotkeyTriggered():
   global triggered
   triggered = True
-
-keyboard.add_hotkey(HOTKEY, setHotkeyTriggered)

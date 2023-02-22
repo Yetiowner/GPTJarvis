@@ -18,6 +18,7 @@ import ctypes
 import functools
 import importlib.util
 import sys
+from enum import Enum
 
 #TODO: add long term memory
 #TODO: add function chaining
@@ -32,13 +33,15 @@ UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
 chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
-TEXT2TEXT = "T2T"
-SPEECH2SPEECH = "S2S"
-TEXT2SPEECH = "T2S"
-SPEECH2TEXT = "S2T"
+class VoiceMode(Enum):
+  TEXT2TEXT = "T2T"
+  SPEECH2SPEECH = "S2S"
+  TEXT2SPEECH = "T2S"
+  SPEECH2TEXT = "S2T"
 
-SYNC = "s"
-ASYNC = "a"
+class SyncMode(Enum):
+  SYNC = "s"
+  ASYNC = "a"
 
 def priority(func):
   @functools.wraps(func)
@@ -103,9 +106,12 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = SPEECH2SPEECH, syncmode = SYNC):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = VoiceMode.SPEECH2SPEECH, syncmode = SyncMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
     scope = [scope]
+
+  if not(os.path.isdir(FILEPATH)):
+    os.mkdir(FILEPATH)
 
   frame = inspect.currentframe().f_back
   filename = inspect.getframeinfo(frame)[0]
@@ -148,13 +154,14 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
   if not(os.path.isdir(FILEPATH)):
     os.mkdir(FILEPATH)
     makeHidden(FILEPATH)
+  
+  voicebox.HOTKEY = speechHotkey
 
-  if syncmode == ASYNC:
+  if syncmode == SyncMode.ASYNC:
     processes = []
     for file in accessablefiles:
       processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
 
-    #chatbot = ChatBot([APIStackOverFlow, APIWikipedia, APIDateTime, APIMaths, APIWeather, APIExchangeRate, APIIPFinder, APILocation], functionlist)
     allvariables = []
     functon_process_relationship = []
     for p in processes:
@@ -284,12 +291,8 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, memory_retention_time, personality, mode, syncmode=SYNC):
-  """createQuery("detonate the mark 32", chosenchatbot, functon_process_relationship, processes)
-  createQuery("build the mark 32", chosenchatbot, functon_process_relationship, processes)"""
-  #ans = createQuery("what is the temperature of suit 6?", chosenchatbot, functon_process_relationship, processes)
-  #voicebox.say(ans)
-  #chosenchatbot.breakConversation()
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, memory_retention_time, personality, mode: VoiceMode, syncmode=SyncMode.SYNC):
+  mode = mode.value
   inmode = mode[0]
   outmode = mode[2]
   print("Ready")
@@ -302,16 +305,6 @@ def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relations
       chosenchatbot.breakConversation()
     ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, syncmode)
     voicebox.say(ans1, mode = outmode, personality = personality)
-  """print("\n\n")
-  ans1_2 = createQuery("Is this suitable for ice cream?", chosenchatbot, functon_process_relationship, processes)
-  voicebox.say(ans1_2)
-  print("\n\n")
-  ans1_3 = createQuery("What was my last question?", chosenchatbot, functon_process_relationship, processes)
-  voicebox.say(ans1_3)
-  chosenchatbot.breakConversation()"""
-  #ans2 = createQuery("who invented the alphabet?", chosenchatbot, functon_process_relationship, processes)
-  #voicebox.say(ans2)
-  #createQuery("Set the weather to the opposite of sunny", chosenchatbot, functon_process_relationship, processes)
   
   
 def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, syncmode):
@@ -339,7 +332,6 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
 
     output = sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode)
 
-    #chosenchatbot.register_addHistory(f"Me: {string}\n{chosentype} {thingtorun}")
     if result[0].mode == "R":
       explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
       explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
@@ -351,10 +343,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
       textResult = chosenchatbot.followThroughInformation(explainedOutputFull + f" Where {result[0].showFunction()}", string)
       chosenchatbot.register_addHistory(f"You: {textResult}")
       chosenchatbot.addHistory()
-      #chosenchatbot.register_addInfo(f"Your response: {textResult}")
-      #chosenchatbot.addInfo()
       return textResult
-    #chosenchatbot.addHistory()
+
     if result[0].mode == "F":
       explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
       explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
@@ -366,12 +356,10 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
       chosenchatbot.register_addHistory(f"You: {textResult}")
       chosenchatbot.addHistory()
       return textResult
-    #print(chosenprocess)
-    #print(thingtorun)
 
 
 def sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode):
-  if syncmode == ASYNC:
+  if syncmode == SyncMode.ASYNC:
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
     validoutput = False
@@ -403,7 +391,6 @@ def listenForRunCommand():
       pass
 
 def init():
-  #x = input() # wait for confirmation
   frame = inspect.stack()[1]
   module = inspect.getmodule(frame[0])
   if "-JarvisSubprocess" not in sys.argv:
