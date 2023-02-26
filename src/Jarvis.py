@@ -14,6 +14,7 @@ import shutil
 import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
 import GPTJarvis.src.personalities as personalities
+import GPTJarvis.src.config as config
 import ctypes
 import functools
 import importlib.util
@@ -33,15 +34,23 @@ UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
 chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
+class App:
+  def __init__(self, chosenchatbot, function_module_relationship, memory_retention_time, personality, mode):
+    self.chosenchatbot = chosenchatbot
+    self.function_module_relationship = function_module_relationship
+    self.memory_retention_time = memory_retention_time
+    self.personality = personality
+    self.mode = mode
+
 class VoiceMode(Enum):
   TEXT2TEXT = "T2T"
   SPEECH2SPEECH = "S2S"
   TEXT2SPEECH = "T2S"
   SPEECH2TEXT = "S2T"
 
-class SyncMode(Enum):
-  SYNC = "s"
-  ASYNC = "a"
+class RunningMode(Enum):
+  SYNC = "sync"
+  ASYNC = "async"
 
 def priority(func):
   @functools.wraps(func)
@@ -93,6 +102,15 @@ def update():
     print(UNLIKELYNAMESPACECOLLIDABLE1+str(bytes(str(result), encoding='utf8')))
     sys.stdout.flush()
 
+def update_app(app: App):
+  global startWaitingTime
+
+  startWaitingTime = time.time()
+  mode = app.mode.value
+  inmode = mode[0]
+  outmode = mode[2]
+  runProcess(app.chosenchatbot, app.function_module_relationship, app.memory_retention_time, app.personality, inmode, outmode, RunningMode.SYNC)
+
 def loadApiKeyFromFile(openai_key_path):
   with open(openai_key_path, "r") as f:
     apikey = f.read()
@@ -106,12 +124,120 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = VoiceMode.SPEECH2SPEECH, syncmode = SyncMode.SYNC, speechHotkey = "alt+j"):
+def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = VoiceMode.SPEECH2SPEECH, speechHotkey = "alt+j"):
+
+
+  allinfo = []
+  if includePersonalInfo and config.loadPersonalInfo() != None:
+    allinfo.append("Personal info:\n" + str(config.loadPersonalInfo()))
+  if appinfo != None:
+    allinfo.append("App info:\n" + appinfo)
+  if allinfo == []:
+    allinfo = ["None"]
+  info = "\n".join(allinfo)
+
+
+  if not(os.path.isdir(FILEPATH)):
+    os.mkdir(FILEPATH)
+  
+  if openai_key:
+    chatbot.apikey = openai_key
+  else:
+    apikey = config.loadApiKey()
+    if not(apikey):
+      raise KeyError("You need to configure an API key to use this app!")
+    chatbot.apikey = apikey
+
+  try:
+    shutil.rmtree(FILEPATH+"streamedFileOutput")
+  except FileNotFoundError:
+    pass
+  os.mkdir(FILEPATH+"streamedFileOutput")
+
+  makeHidden(FILEPATH)
+  if not(os.path.isdir(FILEPATH)):
+    os.mkdir(FILEPATH)
+    makeHidden(FILEPATH)
+  
+  voicebox.HOTKEY = speechHotkey
+  
+
+  function_module_relationship = []
+  allvariables = []
+  modulevariables = []
+
+  frame = inspect.currentframe().f_back
+  module = inspect.getmodule(frame)
+
+  functions = [getattr(module, a) for a in dir(module) if isinstance(getattr(module, a), types.FunctionType)]
+  readables = []
+  runnables = []
+  for item in functions:
+    if getattr(item, "runnable", False):
+      runnables.append(item)
+    if getattr(item, "readable", False):
+      readables.append(item)
+  
+  for functype in [runnables, readables]:
+    out = []
+    for function in functype:
+      func = function.func
+      if getattr(function, "priority", False):
+        priority = True
+      else:
+        priority = False
+      out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+
+    funced = []
+    for func in out:
+      funced.append(chatbot.Function(*func))
+    for func in funced:
+      function_module_relationship.append([func, module])
+    modulevariables.append(funced)
+  
+  allvariables.append(modulevariables)
+  
+  functions = []
+  readables = []
+  for modulefuncs in allvariables:
+    modulefunctions = modulefuncs[0]
+    modulereadables = modulefuncs[1]
+    for i in modulefunctions:
+      functions.append(i)
+    for i in modulereadables:
+      readables.append(i)
+  
+
+  chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
+
+  print(functions)
+  print(readables)
+
+  return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, mode)
+
+
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, mode = VoiceMode.SPEECH2SPEECH, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
     scope = [scope]
 
   if not(os.path.isdir(FILEPATH)):
     os.mkdir(FILEPATH)
+  
+  if openai_key:
+    chatbot.apikey = openai_key
+
+  try:
+    shutil.rmtree(FILEPATH+"streamedFileOutput")
+  except FileNotFoundError:
+    pass
+  os.mkdir(FILEPATH+"streamedFileOutput")
+
+  makeHidden(FILEPATH)
+  if not(os.path.isdir(FILEPATH)):
+    os.mkdir(FILEPATH)
+    makeHidden(FILEPATH)
+  
+  voicebox.HOTKEY = speechHotkey
 
   frame = inspect.currentframe().f_back
   filename = inspect.getframeinfo(frame)[0]
@@ -141,29 +267,13 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
 
   accessablefiles = allaccessible
 
-  if openai_key:
-    chatbot.apikey = openai_key
-
-  try:
-    shutil.rmtree(FILEPATH+"streamedFileOutput")
-  except FileNotFoundError:
-    pass
-  os.mkdir(FILEPATH+"streamedFileOutput")
-
-  makeHidden(FILEPATH)
-  if not(os.path.isdir(FILEPATH)):
-    os.mkdir(FILEPATH)
-    makeHidden(FILEPATH)
-  
-  voicebox.HOTKEY = speechHotkey
-
-  if syncmode == SyncMode.ASYNC:
+  if runningmode == RunningMode.ASYNC:
     processes = []
     for file in accessablefiles:
       processes.append(subprocess.Popen([sys.executable, file, "-JarvisSubprocess"], stdin=PIPE, stdout=PIPE, universal_newlines=True))
 
     allvariables = []
-    functon_process_relationship = []
+    function_process_relationship = []
     for p in processes:
       processvariables = []
       expectedcount = 2
@@ -177,7 +287,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
             for evalledfunc in evalled:
               funced.append(chatbot.Function(*evalledfunc))
             for func in funced:
-              functon_process_relationship.append([func, p])
+              function_process_relationship.append([func, p])
             processvariables.append(funced)
             if expectedcount == 0:
               break
@@ -199,10 +309,10 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
 
     startStreamingOutput()
 
-    runProcessMainloop(chosenchatbot, functon_process_relationship, memory_retention_time, personality, mode, syncmode=syncmode)
+    runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, mode, runningmode=runningmode)
   
-  else:
-    functon_module_relationship = []
+  elif runningmode == RunningMode.SYNC:
+    function_module_relationship = []
     allvariables = []
 
     for index, file in enumerate(accessablefiles):
@@ -235,7 +345,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
         for func in out:
           funced.append(chatbot.Function(*func))
         for func in funced:
-          functon_module_relationship.append([func, module])
+          function_module_relationship.append([func, module])
         modulevariables.append(funced)
       
       allvariables.append(modulevariables)
@@ -252,7 +362,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     
     chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
 
-    runProcessMainloop(chosenchatbot, functon_module_relationship, memory_retention_time, personality, mode, syncmode=syncmode)
+    runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, mode, runningmode=runningmode)
     
 
 
@@ -291,23 +401,35 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, functon_process_relationship, memory_retention_time, personality, mode: VoiceMode, syncmode=SyncMode.SYNC):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, mode: VoiceMode, runningmode=RunningMode.SYNC):
+  global startWaitingTime
+
+  startWaitingTime = time.time()
   mode = mode.value
   inmode = mode[0]
   outmode = mode[2]
   print("Ready")
   while True:
-    startWaitingTime = time.time()
-    qText = voicebox.listen(mode = inmode)
-    timeTaken = time.time()-startWaitingTime
-    if timeTaken > memory_retention_time:
-      print("Breaking conversation.")
-      chosenchatbot.breakConversation()
-    ans1 = createQuery(qText, chosenchatbot, functon_process_relationship, syncmode)
-    voicebox.say(ans1, mode = outmode, personality = personality)
+    runProcess(chosenchatbot, function_process_relationship, memory_retention_time, personality, inmode, outmode, runningmode)
   
-  
-def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relationship, syncmode):
+
+def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inmode, outmode, runningmode):
+  global startWaitingTime
+
+  qText = voicebox.listen(mode = inmode)
+  if qText == None:
+    return
+  timeTaken = time.time()-startWaitingTime
+  startWaitingTime = time.time()
+  if timeTaken > memory_retention_time:
+    print("Breaking conversation.")
+    chosenchatbot.breakConversation()
+  ans1 = createQuery(qText, chosenchatbot, function_process_relationship, runningmode)
+  thread = threading.Thread(target=voicebox.say, args=(ans1,), kwargs={"mode": outmode, "personality": personality})
+  thread.start()
+  #voicebox.say(ans1, mode = outmode, personality = personality)
+
+def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode):
   chosentype, result = chosenchatbot.query(string)
   print(result)
   chosenchatbot.register_addHistory(f"My query: {string}")
@@ -316,7 +438,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
     chosenchatbot.addHistory()
     return result
   else:
-    for function in functon_process_relationship:
+    for function in function_process_relationship:
       if function[0] == result[0]:
         chosenprocess = function[1]
     
@@ -330,7 +452,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
       chosenchatbot.addHistory()
       return result
 
-    output = sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode)
+    output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode)
 
     if result[0].mode == "R":
       explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
@@ -358,8 +480,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, functon_process_relation
       return textResult
 
 
-def sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode):
-  if syncmode == SyncMode.ASYNC:
+def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode):
+  if runningmode == RunningMode.ASYNC:
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
     validoutput = False
@@ -370,7 +492,7 @@ def sendAndReceiveFromFunction(chosenprocess, thingtorun, syncmode):
         output = bytes(output).decode("utf-8")
         output = output.strip()
         validoutput = True
-  else:
+  elif runningmode == RunningMode.SYNC:
     try:
       localscopy = locals()
       result = eval(f"chosenprocess.{thingtorun}", localscopy)

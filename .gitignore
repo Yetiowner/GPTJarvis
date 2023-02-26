@@ -1,7 +1,6 @@
 secret.txt
 __pycache__/
-*.log
 /keys.json
-*.csv
 aditionalInfo.txt
 .Jarvis/
+Personal Info/
