@@ -60,7 +60,12 @@ def listen(mode="S"):
   if mode == "T":
     return input("Enter a query: ")
   elif mode == "S":
-    return startListening()
+    audio2, recog = startListening()
+    text = recog.recognize_google(audio2, show_all=True, with_confidence=True)#, language="en-GB")
+    choices = [text["alternative"][i]["transcript"] for i in range(len(text["alternative"]))]
+    truetext = choices[0]
+    
+    return truetext
 
 
 def awaitHotkeyPress():
@@ -109,11 +114,7 @@ def startListening():
       frames.close()
       audio2 = sr.AudioData(frame_data, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
 
-    text = recog.recognize_google(audio2, show_all=True, with_confidence=True)#, language="en-GB")
-    choices = [text["alternative"][i]["transcript"] for i in range(len(text["alternative"]))]
-    truetext = choices[0]
-    
-    return truetext
+    return audio2, recog
 
 def setHotkeyTriggered():
   global triggered
