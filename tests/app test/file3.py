@@ -53,7 +53,7 @@ fr_buttons.grid(row=0, column=0, sticky="ns")
 txt_edit.grid(row=0, column=1, sticky="nsew")
 
 app = Jarvis.init_app(
-  appinfo = "This is an app that does pretty much everything",
+  appinfo = "This app acts as a word processor",
   personality = personalities.JARVIS, 
   openai_key = None,
   temperature = 0.6,
