@@ -56,7 +56,7 @@ class Function():
         self.mode = None
     
     def showFunction(self):
-        return f"{self.function}({', '.join(self.args)}){' Description: ' + self.description if self.description else ''}"
+        return f"{self.mode} {self.function}({', '.join(self.args)}) With {len(self.args)} arguments.{' Description: ' + self.description if self.description else ''}"
     
     def __repr__(self):
         return f"Func {self.number}: {self.function}"
@@ -366,7 +366,7 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, "\n".join(self.requesthistory), question, data)
+        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, "\n".join(self.requesthistory), data, question)
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):

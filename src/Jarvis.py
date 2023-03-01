@@ -100,7 +100,7 @@ def update():
           if result == None:
             result = "Success!"
         except Exception as e:
-          result = str(e)
+          result = "Opperation failed: " + str(e)
     #while True:
     print(UNLIKELYNAMESPACECOLLIDABLE1+str(bytes(str(result), encoding='utf8')))
     sys.stdout.flush()
@@ -501,8 +501,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
       return textResult
 
     if result[0].mode == "F":
-      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
-      explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
+      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output if len(output) < 100 else 'Truncated as too long'}"
+      explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output}"
       chosenchatbot.register_addInfo(explainedOutput)
       chosenchatbot.addInfo()
 
@@ -532,7 +532,7 @@ def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode):
       if result == None:
         result = "Success!"
     except Exception as e:
-      result = str(e)
+      result = "Opperation failed: " + str(e)
     output = result
   return output
 
