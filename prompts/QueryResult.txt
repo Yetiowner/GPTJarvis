@@ -17,6 +17,23 @@ You: N Hello.
 Me: How old will I be in 5 years?
 You: R getUserAge()
 
+<chaining>
+Me: Is it currently warmer in detroit or in madagascar?
+You: R getTemperature(42.3314, 83.0458) # Temperature in detroit
+R getTemperature(18.7699, 46.8691) # Temperature in madagascar
+C Compare the above temperatures. Which is warmer?
+
+Me: Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
+You: F saveProgram()
+F quitProgram()
+N foo, bar, baz
+R getTabOpenNumber()
+C Using the information I have given you, are there are more than 8 open tabs? If so, reopen the program.
+
+Me: Get the time zone at the latitude and longitude of the number of questions I have asked.
+You: C How many questions have I asked?
+C Using the information I have given you, get the time zone at the latitude and longitude of that number.
+</chaining>
 )
 
 Here is a list of accessors: {}.
@@ -27,7 +44,9 @@ Previous results: (
 {})
 
 Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, or if neither work, just reply "N" followed by your response as the character I told you to be. Answer questions using information from previous results.
-Fill it with precicely the specified number of arguments.
+<chaining>If the request should be split into parts, reply with C followed by the request split into parts on separate lines. Put C at the start of each output line. Each line should be in plain english.</chaining>
+Fill it with precicely the specified number of arguments. Use Python syntax.
+
 
 My query: {}
 Your response: 

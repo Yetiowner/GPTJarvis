@@ -22,7 +22,6 @@ import sys
 from enum import Enum
 
 #TODO: add long term memory
-#TODO: add function chaining
 #TODO: add true automation E.g. using @Jarvis.listener
 
 functionlist = []
@@ -462,55 +461,105 @@ def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, me
       outputfunc(ans1)
   #voicebox.say(ans1, mode = outputfunc, personality = personality)
 
-def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode):
-  chosentype, result = chosenchatbot.query(string)
-  print(result)
-  chosenchatbot.register_addHistory(f"My query: {string}")
-  if chosentype == "N":
-    chosenchatbot.register_addHistory(f"Your response: N {result}")
-    chosenchatbot.addHistory()
-    return result
-  else:
-    for function in function_process_relationship:
-      if function[0] == result[0]:
-        chosenprocess = function[1]
+def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True):
+  resultset = chosenchatbot.query(string, chaining)
+  print(resultset)
+
+  chained = (len(resultset) > 1)
+
+
+  allresults = []
+  informationtofollowthrough = []
+  explainedlist = [] # This is to stop duplication of costly function descriptions
+
+  for chosentype, result in resultset:
+    chosenchatbot.register_addHistory(f"My query: {string}")
+    if chosentype == "N":
+      chosenchatbot.register_addHistory(f"Your response: N {result}")
+      chosenchatbot.addHistory()
     
-    thingtorun = result[1]
-    if "\n" in thingtorun:
-      thingtorun = thingtorun.split("\n")[0]
+    elif chosentype == "C":
+      result = createQuery(result[1:].lstrip() + " Important: Do not use function chaining! Only use information that has already been given!", chosenchatbot, function_process_relationship, runningmode, chaining = False)
+      print("fdsafsafasdfgasjdgfasjkdfghakj" + result)
+      result = None
 
-    if thingtorun.split("(")[0] != result[0].function:
-      result = chosenchatbot.followThroughInformation("", string)
-      chosenchatbot.register_addHistory(f"Your response: {result}")
-      chosenchatbot.addHistory()
-      return result
 
-    output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode)
+    else:
+      for function in function_process_relationship:
+        if function[0] == result[0]:
+          chosenprocess = function[1]
+      
+      thingtorun = result[1]
+      if "\n" in thingtorun:
+        thingtorun = thingtorun.split("\n")[0]
 
-    if result[0].mode == "R":
-      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
-      explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
+      if thingtorun.split("(")[0] != result[0].function:
+        if not(chained):
+          result = chosenchatbot.followThroughInformation("", string)
+        else:
+          result = None
+          informationtofollowthrough.append("")
+        chosenchatbot.register_addHistory(f"Your response: {result}")
+        chosenchatbot.addHistory()
+      
+      else:
 
-      chosenchatbot.register_addInfo(explainedOutput)
-      chosenchatbot.addInfo()
+        output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode)
 
-      chosenchatbot.register_addHistory(explainedOutput)
-      textResult = chosenchatbot.followThroughInformation(explainedOutputFull + f" Where {result[0].showFunction()}", string)
-      chosenchatbot.register_addHistory(f"You: {textResult}")
-      chosenchatbot.addHistory()
-      return textResult
+        if result[0].mode == "R":
+          explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
+          explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
 
-    if result[0].mode == "F":
-      explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output if len(output) < 100 else 'Truncated as too long'}"
-      explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output}"
-      chosenchatbot.register_addInfo(explainedOutput)
-      chosenchatbot.addInfo()
+          if result[0].showFunction() not in explainedlist:
+            explainedOutputFull += f" Where {result[0].showFunction()}"
+            explainedlist.append(result[0].showFunction())
 
-      chosenchatbot.register_addHistory(explainedOutput)
-      textResult = chosenchatbot.followThroughInformation(explainedOutputFull + f" Where {result[0].showFunction()}", string)
-      chosenchatbot.register_addHistory(f"You: {textResult}")
-      chosenchatbot.addHistory()
-      return textResult
+          chosenchatbot.register_addInfo(explainedOutput)
+          chosenchatbot.addInfo()
+
+          chosenchatbot.register_addHistory(explainedOutput)
+          if not(chained):
+            textResult = chosenchatbot.followThroughInformation(explainedOutputFull, string)
+          else:
+            textResult = None
+            informationtofollowthrough.append(explainedOutputFull)
+          chosenchatbot.register_addHistory(f"You: {textResult}")
+          chosenchatbot.addHistory()
+
+          result = textResult
+
+        elif result[0].mode == "F":
+          explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output if len(output) < 100 else 'Truncated as too long'}"
+          explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output}"
+
+          if result[0].showFunction() not in explainedlist:
+            explainedOutputFull += f" Where {result[0].showFunction()}"
+            explainedlist.append(result[0].showFunction())
+
+          chosenchatbot.register_addInfo(explainedOutput)
+          chosenchatbot.addInfo()
+
+          chosenchatbot.register_addHistory(explainedOutput)
+          if not(chained):
+            textResult = chosenchatbot.followThroughInformation(explainedOutputFull, string)
+          else:
+            textResult = None
+            informationtofollowthrough.append(explainedOutputFull)
+          chosenchatbot.register_addHistory(f"You: {textResult}")
+          chosenchatbot.addHistory()
+
+          result = textResult
+    
+    if result != None:
+      allresults.append(result)
+  
+  if chained:
+    allresults.append(chosenchatbot.followThroughInformation("\n\n".join(informationtofollowthrough), string))
+  
+  return "\n".join(allresults)
+  #print(informationtofollowthrough)
+
+    
 
 
 def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode):
@@ -531,6 +580,8 @@ def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode):
       result = eval(f"chosenprocess.{thingtorun}", localscopy)
       if result == None:
         result = "Success!"
+      else:
+        result = str(result)
     except Exception as e:
       result = "Opperation failed: " + str(e)
     output = result

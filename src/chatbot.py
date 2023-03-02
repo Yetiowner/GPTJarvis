@@ -129,10 +129,10 @@ class ChatBot():
         #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
     
-    def query(self, text):
+    def query(self, text, chaining = True):
         print("----------------------------")
 
-        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text)
+        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text, chaining)
         print(textToQuery)
 
         #print(textToQuery)
@@ -151,38 +151,45 @@ class ChatBot():
         logUsage(response)
 
 
-        response = response["choices"][0]["text"].lstrip()
-        print(response)
-        choice = response[0]
-        restofresponse = response[1:].lstrip()
+        superresponse = response["choices"][0]["text"].lstrip().split("\n")
+
+        responses = []
+
+        for response in superresponse:
+            print(response)
+            choice = response[0]
+            restofresponse = response[1:].lstrip()
 
 
-        if choice == "R":
-            readnumber = readnumbers[0]
-            for readablenumber in readnumbers:
-                chosenreadable = self.getReadFromNumber(readablenumber)
-                if chosenreadable.function == restofresponse.split("(")[0]:
-                    readnumber = readablenumber
-            chosenread = self.getReadFromNumber(readnumber)
-            chosenreadtorun = restofresponse
-            response = [chosenread, chosenreadtorun]
+            if choice == "R":
+                readnumber = readnumbers[0]
+                for readablenumber in readnumbers:
+                    chosenreadable = self.getReadFromNumber(readablenumber)
+                    if chosenreadable.function == restofresponse.split("(")[0]:
+                        readnumber = readablenumber
+                chosenread = self.getReadFromNumber(readnumber)
+                chosenreadtorun = restofresponse
+                response = [chosenread, chosenreadtorun]
 
-        elif choice == "F":
-            funcnumber = funcnumbers[0]
-            for functionnumber in funcnumbers:
-                chosenfunc = self.getFuncFromNumber(functionnumber)
-                if chosenfunc.function == restofresponse.split("(")[0]:
-                    funcnumber = functionnumber
-            chosenfunction = self.getFuncFromNumber(funcnumber)
-            chosenfunctiontorun = restofresponse
-            response = [chosenfunction, chosenfunctiontorun]
+            elif choice == "F":
+                funcnumber = funcnumbers[0]
+                for functionnumber in funcnumbers:
+                    chosenfunc = self.getFuncFromNumber(functionnumber)
+                    if chosenfunc.function == restofresponse.split("(")[0]:
+                        funcnumber = functionnumber
+                chosenfunction = self.getFuncFromNumber(funcnumber)
+                chosenfunctiontorun = restofresponse
+                response = [chosenfunction, chosenfunctiontorun]
 
-        elif choice == "N":
-            print("=======================")
-            response = restofresponse
+            elif choice == "N":
+                print("=======================")
+                response = restofresponse
+            
+            print("----------------------------")
+
+            responses.append([choice, response])
         
-        print("----------------------------")
-        return choice, response
+        return responses
     
     def register_addInfo(self, info):
         self.tempinfo += info + "\n"
@@ -261,7 +268,7 @@ class ChatBot():
         df["priority"] = [i.priority for i in self.functions]
         df.to_csv(FILEPATH+'embedded_functions.csv', index=False)
 
-    def generateSetupText(self, df, df1, prompt):
+    def generateSetupText(self, df, df1, prompt, chaining):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
 
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
@@ -296,7 +303,10 @@ class ChatBot():
             funcnums.append(funcnum)
         funcs = "\n".join(funcs)
 
-        text = loadPrompt("QueryResult.txt").format(self.personality.prompt, self.info, readables, funcs, "\n".join(self.requesthistory), prompt)
+        text = loadPrompt("QueryResult.txt")
+        if not chaining:
+            text = re.sub("<chaining>(?s:.*?)</chaining>", "", text)
+        text = text.format(self.personality.prompt, self.info, readables, funcs, "\n".join(self.requesthistory), prompt)
         return text, readablenums, funcnums
 
 
