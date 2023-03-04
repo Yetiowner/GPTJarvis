@@ -1,13 +1,14 @@
-Answer the following question. Do not volunteer unneccesary information, and only use information I have asked you about. Don't use information I haven't asked you about.
+---------------------------system
+Here is some information: 
+{personality}
+{info}
 
-Information:
-{}
-{}
+---------------------------user
+Data: {data}
 
-Previous results: (
-{})
+Question history:
+{q_and_a_history}
 
-{}
+Using the information I have given you, answer the following question in your own words.
 
-My query: {}
-Using the information I have given you, answer the question in your own words.
+My query: {query}

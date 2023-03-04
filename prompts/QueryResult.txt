@@ -1,52 +1,52 @@
+---------------------------system
 Here is some information: 
-{}
-{}
-
-I am about to give you a request.
-
-Examples:
-
-(
-
-Me: What is time in london? 
-You: R getTime("London")
-
-Me: Hello.
-You: N Hello.
-
-Me: How old will I be in 5 years?
-You: R getUserAge()
-
-<chaining>
-Me: Is it currently warmer in detroit or in madagascar?
-You: R getTemperature(42.3314, 83.0458) # Temperature in detroit
+{personality}
+{info}
+---------------------------system,example_user
+What is time in london? 
+---------------------------system,example_assistant
+R getTime("London")
+---------------------------system,example_user
+Hello.
+---------------------------system,example_assistant
+N Hello.
+---------------------------system,example_user
+How old will I be in 5 years?
+---------------------------system,example_assistant
+R getuserAge()
+---------------------------system,example_user
+Is it currently warmer in detroit or in madagascar?
+---------------------------system,example_assistant
+R getTemperature(42.3314, 83.0458) # Temperature in detroit
 R getTemperature(18.7699, 46.8691) # Temperature in madagascar
-C Compare the above temperatures. Which is warmer?
-
-Me: Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
-You: F saveProgram()
+C Which is warmer?
+---------------------------system,example_user
+Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
+---------------------------system,example_assistant
+F saveProgram()
 F quitProgram()
 N foo, bar, baz
 R getTabOpenNumber()
-C Using the information I have given you, are there are more than 8 open tabs? If so, reopen the program.
-
+C Are there are more than 8 open tabs? If so, reopen the program.
+---------------------------system,example_user
 Me: Get the time zone at the latitude and longitude of the number of questions I have asked.
-You: C How many questions have I asked?
+---------------------------system,example_assistant
+C How many questions have I asked?
 C Using the information I have given you, get the time zone at the latitude and longitude of that number.
-</chaining>
-)
+---------------------------user
+Here is a list of accessors: {accessors}.
 
-Here is a list of accessors: {}.
+Here is a list of functions that can perform an action: {functions}
 
-Here is a list of functions that can perform an action: {}
-
-Previous results: (
-{})
-
-Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, or if neither work, just reply "N" followed by your response as the character I told you to be. Answer questions using information from previous results.
-<chaining>If the request should be split into parts, reply with C followed by the request split into parts on separate lines. Put C at the start of each output line. Each line should be in plain english.</chaining>
+Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, or if neither work, just reply "N" followed by your response as the character I told you to be. Answer questions using information from previous results. Only use the accessors and functions I have given you.
+<chain>If the request should be split into parts, reply with the request split over multiple lines, and if the AI needs to make a decision, add a line with a "C" followed by the plain english instruction for comparrison. Only use the accessors and functions I have given you. For example, if I request you do something to multiple items, reply with that function/accessor on each line for each item.
 Fill it with precicely the specified number of arguments. Use Python syntax.
 
+I am about to give you a request. Respond precisely in the manner I have told you to, only replying with one of the options.
 
-My query: {}
-Your response: 
+Information to use:
+{information_for_chaining}
+
+The conversation:
+{q_and_a_history}
+My query: {prompt}

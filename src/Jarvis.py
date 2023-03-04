@@ -23,6 +23,7 @@ from enum import Enum
 
 #TODO: add long term memory
 #TODO: add true automation E.g. using @Jarvis.listener
+#TODO: add whisper audio integration
 
 functionlist = []
 opqueue = []
@@ -125,7 +126,7 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, personalityimplemented = True, speechHotkey = "alt+j"):
+def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, personalityimplemented = True, speechHotkey = "alt+j"):
 
   allinfo = []
   if includePersonalInfo and config.loadPersonalInfo() != None:
@@ -218,7 +219,7 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
   return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented)
 
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 3, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, personalityimplemented = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, personalityimplemented = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
     scope = [scope]
 
@@ -461,8 +462,9 @@ def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, me
       outputfunc(ans1)
   #voicebox.say(ans1, mode = outputfunc, personality = personality)
 
-def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True):
-  resultset = chosenchatbot.query(string, chaining)
+def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True, information_for_chaining = None):
+  resultset = chosenchatbot.query(string, chaining, information_for_chaining)
+  chosenchatbot.addQuestion(string)
   print(resultset)
 
   chained = (len(resultset) > 1)
@@ -477,9 +479,11 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
     if chosentype == "N":
       chosenchatbot.register_addHistory(f"Your response: N {result}")
       chosenchatbot.addHistory()
+      chosenchatbot.addAnswer(result)
     
     elif chosentype == "C":
-      result = createQuery(result[1:].lstrip() + " Important: Do not use function chaining! Only use information that has already been given!", chosenchatbot, function_process_relationship, runningmode, chaining = False)
+      print(informationtofollowthrough)
+      result = createQuery(result[1:].lstrip() + " Note: Just use the information you have been given.", chosenchatbot, function_process_relationship, runningmode, chaining = False, information_for_chaining = informationtofollowthrough)
       print("fdsafsafasdfgasjdgfasjkdfghakj" + result)
       result = None
 
@@ -493,7 +497,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
       if "\n" in thingtorun:
         thingtorun = thingtorun.split("\n")[0]
 
-      if thingtorun.split("(")[0] != result[0].function:
+      if thingtorun.split("(")[0] != result[0].function: # Attempted to suggest invalid function
         if not(chained):
           result = chosenchatbot.followThroughInformation("", string)
         else:
@@ -501,6 +505,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
           informationtofollowthrough.append("")
         chosenchatbot.register_addHistory(f"Your response: {result}")
         chosenchatbot.addHistory()
+        if result:
+          chosenchatbot.addAnswer(result)
       
       else:
 
@@ -514,8 +520,6 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
             explainedOutputFull += f" Where {result[0].showFunction()}"
             explainedlist.append(result[0].showFunction())
 
-          chosenchatbot.register_addInfo(explainedOutput)
-          chosenchatbot.addInfo()
 
           chosenchatbot.register_addHistory(explainedOutput)
           if not(chained):
@@ -527,6 +531,9 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
           chosenchatbot.addHistory()
 
           result = textResult
+
+          if result:
+            chosenchatbot.addAnswer(result)
 
         elif result[0].mode == "F":
           explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output if len(output) < 100 else 'Truncated as too long'}"
@@ -536,9 +543,6 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
             explainedOutputFull += f" Where {result[0].showFunction()}"
             explainedlist.append(result[0].showFunction())
 
-          chosenchatbot.register_addInfo(explainedOutput)
-          chosenchatbot.addInfo()
-
           chosenchatbot.register_addHistory(explainedOutput)
           if not(chained):
             textResult = chosenchatbot.followThroughInformation(explainedOutputFull, string)
@@ -549,6 +553,9 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
           chosenchatbot.addHistory()
 
           result = textResult
+
+          if result:
+            chosenchatbot.addAnswer(result)
     
     if result != None:
       allresults.append(result)

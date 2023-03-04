@@ -14,8 +14,8 @@ import json
 from GPTJarvis.src.utils import loadPrompt
 import GPTJarvis.src.personalities as personalities
 
-MODEL = "text-davinci-003"
-PERMANENTINFO = loadPrompt("PermanentInfo.txt")
+MODEL = "gpt-3.5-turbo"
+PERMANENTINFO = loadPrompt("PermanentInfo.txt", mode = "text")
 FILEPATH = None
 
 class API():
@@ -80,11 +80,13 @@ class ChatBot():
         for index, readable in enumerate(self.readables):
             readable.number = index + 1
             readable.mode = "R"
+        print(info)
         self.originalinfo = PERMANENTINFO + "\n\n\n" + info
         self.info = self.genInfoText() # Information including previous accessor/func calls
         self.tempinfo = ""
         self.requesthistory = []
         self.temphistory = ""
+        self.q_and_a_history = ""
         self.maxhistorylength = maxhistorylength
         self.sampleCount = sampleCount
         self.minSimilarity = minSimilarity
@@ -129,21 +131,21 @@ class ChatBot():
         #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
     
-    def query(self, text, chaining = True):
+    def query(self, text, chaining = True, information_for_chaining = None):
         print("----------------------------")
 
-        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text, chaining)
-        print(textToQuery)
+        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text, chaining, information_for_chaining)
+        self.display(textToQuery)
 
         #print(textToQuery)
 
         #print(textToQuery)
         
-        response = openai.Completion.create(
-        engine=MODEL,
-        prompt=textToQuery,
+        response = openai.ChatCompletion.create(
+        model=MODEL,
+        messages=textToQuery,
         temperature=self.temperature,
-        max_tokens=512,
+        max_tokens=2048,
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0
@@ -151,13 +153,17 @@ class ChatBot():
         logUsage(response)
 
 
-        superresponse = response["choices"][0]["text"].lstrip().split("\n")
+        superresponse = response["choices"][0]["message"]["content"].lstrip().rstrip().split("\n")
 
         responses = []
 
         for response in superresponse:
             print(response)
+            if len(response) == 0:
+                continue
             choice = response[0]
+            if response[1] != " ":
+                choice = None
             restofresponse = response[1:].lstrip()
 
 
@@ -184,6 +190,12 @@ class ChatBot():
             elif choice == "N":
                 print("=======================")
                 response = restofresponse
+            
+            elif choice == "C":
+                pass
+            
+            else:
+                choice = "N"
             
             print("----------------------------")
 
@@ -216,24 +228,30 @@ class ChatBot():
         self.temphistory = ""
         self.tempinfo = ""
     
+    def addQuestion(self, question):
+        self.q_and_a_history += "Me: " + question + "\n"
+    
+    def addAnswer(self, answer):
+        self.q_and_a_history += "You: " + answer + "\n"
+    
     def commitToLTM(self, info, mode=None):
         #TODO
         pass
 
     def followThroughInformation(self, information, question):
         analysis = self.generateAnalysisText(information, question)
-        print(analysis+"\n=======================")
-        response = openai.Completion.create(
-        engine=MODEL,
-        prompt=analysis,
+        self.display(analysis)
+        response = openai.ChatCompletion.create(
+        model=MODEL,
+        messages=analysis,
         temperature=self.temperature,
-        max_tokens=1024,
+        max_tokens=2048,
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0
         )
         logUsage(response)
-        response = response["choices"][0]["text"].lstrip()
+        response = response["choices"][0]["message"]["content"].lstrip().rstrip()
         return response
     
     def loadReadableQueryEmbedding(self):
@@ -268,7 +286,7 @@ class ChatBot():
         df["priority"] = [i.priority for i in self.functions]
         df.to_csv(FILEPATH+'embedded_functions.csv', index=False)
 
-    def generateSetupText(self, df, df1, prompt, chaining):
+    def generateSetupText(self, df, df1, prompt, chaining, information_for_chaining):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
 
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
@@ -304,11 +322,32 @@ class ChatBot():
         funcs = "\n".join(funcs)
 
         text = loadPrompt("QueryResult.txt")
-        if not chaining:
-            text = re.sub("<chaining>(?s:.*?)</chaining>", "", text)
-        text = text.format(self.personality.prompt, self.info, readables, funcs, "\n".join(self.requesthistory), prompt)
+        if not chaining: # Remove chaining prompt
+            newtext = []
+            for i in range(len(text)):
+                if "\nC " not in text[i]["content"]:
+                    newtext.append(text[i])
+            text = newtext
+            newend = []
+            for line in text[-1]["content"].split("\n"):
+                if not(line.startswith("<chain>")):
+                    newend.append(line)
+            text[-1]["content"] = "\n".join(newend)
+        text[0]["content"] = text[0]["content"].format(personality=self.personality.prompt, info=self.info)
+        text[-1]["content"] = text[-1]["content"].format(accessors=readables, functions=funcs, information_for_chaining = ("\n".join(information_for_chaining) if information_for_chaining else ""), q_and_a_history=self.q_and_a_history.rstrip(), prompt=prompt)
+        text = self.injectHistory(text)
         return text, readablenums, funcnums
-
+    
+    def display(self, prompts):
+        for item in prompts:
+            if "name" in item:
+                label = item["name"]
+            else:
+                label = item["role"]
+            print(label)
+            content = item["content"]
+            content = "\n".join(["\t" + i for i in content.split("\n")])
+            print(content)
 
     def getMostUsefulParagraph(self, paragraphlist, valuepairs, prompt):
         n = 3
@@ -376,7 +415,18 @@ class ChatBot():
         return int(out)
 
     def generateAnalysisText(self, data, question):
-        return loadPrompt("Analysis.txt").format(self.personality.prompt, self.info, "\n".join(self.requesthistory), data, question)
+        text = loadPrompt("Analysis.txt")
+        text[0]["content"] = text[0]["content"].format(personality=self.personality.prompt, info=self.info)
+        text[-1]["content"] = text[-1]["content"].format(data=data, q_and_a_history=self.q_and_a_history, query=question)
+        text = self.injectHistory(text)
+        return text
+    
+    def injectHistory(self, text: list):
+        for historyitem in self.requesthistory:
+            thingtoinsert = {"role": "system", "name": "previous_requests", "content": historyitem}
+            print(thingtoinsert)
+            text.insert(len(text)-1, thingtoinsert)
+        return text
 
 
 def get_embedding(text: str, model="text-embedding-ada-002"):
