@@ -14,10 +14,13 @@ import io
 import keyboard
 import threading
 import tkinter
-
+import openai
+from waiting import wait
+import random
 
 FILEPATH = ".Jarvis/"
 HOTKEY = "alt+j"
+listening = False
 
 def say(text, personality=personalities.JARVIS):
   url = f"https://api.streamelements.com/kappa/v2/speech?voice={personality.voice}&text={quote(text)}" # thx to https://github.com/styler for API
@@ -53,11 +56,10 @@ def say(text, personality=personalities.JARVIS):
   except FileNotFoundError:
     pass
 
-def awaitHotkeyPress():
+def awaitHotkeyPress(hotkey):
   global triggered
   triggered = False
-  while not triggered:
-    time.sleep(0.1)
+  keyboard.wait(hotkey=hotkey)
   triggered = False
 
 def checkHotkeyRelease():
@@ -80,49 +82,103 @@ def startTextboxListener():
   thread = threading.Thread(target=textboxListener)
   thread.start()
 
-def voiceListener():
-    global stop
-    while True:
-      try:
-        keyboard.clear_all_hotkeys()
-      except AttributeError:
-        pass
-      keyboard.add_hotkey(HOTKEY, setHotkeyTriggered)
-      recog = sr.Recognizer()
-      #print(sr.Microphone.list_microphone_names())
-      lastHotkeyPoll = time.time()
-      with sr.Microphone() as source:
-        recog.adjust_for_ambient_noise(source, duration=0.5)
+def startListening():
+  global listening
+  if not listening:
+    listening = True
 
-        awaitHotkeyPress()
-      
-        frames = io.BytesIO()
-        stop = False
-        while stop == False:
-            if time.time()-lastHotkeyPoll > 0.2:
-              if checkHotkeyRelease():
-                break
-              lastHotkeyPoll = time.time()
+def stopListening():
+  global stop
+  global listening
+  listening = False
+  stop = True
 
-            buffer = source.stream.read(source.CHUNK)
-            if len(buffer) == 0:
-              break
 
-            frames.write(buffer)
-
-        frame_data = frames.getvalue()
-        frames.close()
-        audio2 = sr.AudioData(frame_data, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
-        text = recog.recognize_google(audio2, show_all=True, with_confidence=True)#, language="en-GB")
-        choices = [text["alternative"][i]["transcript"] for i in range(len(text["alternative"]))]
-        truetext = choices[0]
-
-      Jarvis.submitRequest(truetext)
-
-def startVoiceListener():
-  thread = threading.Thread(target=voiceListener)
+def startRecording():
+  thread = threading.Thread(target = voiceListener)
   thread.start()
 
 def setHotkeyTriggered():
   global triggered
   triggered = True
+
+def initiateVoiceListenerThread():
+  thread = threading.Thread(target=initiateVoiceListener)
+  thread.start()
+
+def awaitStart():
+  wait(lambda: listening)
+
+def initiateVoiceListener():
+  global stop
+  while True:
+    recog = sr.Recognizer()
+    #print(sr.Microphone.list_microphone_names())
+    with sr.Microphone() as source:
+      recog.adjust_for_ambient_noise(source, duration=0.5)
+
+      awaitStart()
+    
+      frames = io.BytesIO()
+      stop = False
+      while stop == False:
+          print(random.randint(0, 1))
+
+          buffer = source.stream.read(source.CHUNK)
+          if len(buffer) == 0:
+            break
+
+          frames.write(buffer)
+
+      frame_data = frames.getvalue()
+      frames.close()
+
+      audio = sr.AudioData(frame_data, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
+      with open(f"{FILEPATH}uservoice.wav", "wb") as f:
+        f.write(audio.get_wav_data())
+
+      AudioSegment.from_wav(f"{FILEPATH}uservoice.wav").export(f"{FILEPATH}uservoice.mp3", format="mp3")
+
+      with open(f"{FILEPATH}uservoice.mp3", "rb") as f:
+        timex = time.time()
+        transcript = openai.Audio.transcribe("whisper-1", f, prompt = "Jarvis, could you help me? I have some questions.")
+        print(time.time()-timex)
+    print(transcript)
+
+    Jarvis.submitRequest(transcript)
+
+def voiceListener():
+    global stop
+    with sr.Microphone() as source:
+    
+      frames = io.BytesIO()
+      stop = False
+      print("a")
+      while stop == False:
+
+          buffer = source.stream.read(source.CHUNK)
+          if len(buffer) == 0:
+            break
+
+          frames.write(buffer)
+
+      frame_data = frames.getvalue()
+      frames.close()
+      print("done")
+
+      audio = sr.AudioData(frame_data, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
+      with open(f"{FILEPATH}uservoice.wav", "wb") as f:
+        f.write(audio.get_wav_data())
+
+      AudioSegment.from_wav(f"{FILEPATH}uservoice.wav").export(f"{FILEPATH}uservoice.mp3", format="mp3")
+
+      with open(f"{FILEPATH}uservoice.mp3", "rb") as f:
+        timex = time.time()
+        transcript = openai.Audio.transcribe("whisper-1", f, prompt = "Jarvis, could you help me? I have some questions.")
+        print(time.time()-timex)
+    print(transcript)
+
+    Jarvis.submitRequest(transcript)
+"""
+startVoiceListener()
+keyboard.wait()"""

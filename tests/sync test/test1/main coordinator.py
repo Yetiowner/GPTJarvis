@@ -6,7 +6,7 @@ Jarvis.init_main(
   openai_key = Jarvis.loadApiKeyFromFile("secret.txt"),
   temperature = 0.6,
   minSimilarity = 0.65,
-  backgroundlistener = Jarvis.InputMode.TEXT_BOX,
+  backgroundlistener = Jarvis.InputMode.VOICE,
 )
 
 # Start up discord then minecraft, then get if the temperature of suit 6 is greater than the temperature of suit 7. If suit 7 is hotter, start firefox, otherwise if suit 6 is hotter, start chrome.

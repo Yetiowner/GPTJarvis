@@ -20,6 +20,7 @@ import functools
 import importlib.util
 import sys
 from enum import Enum
+import keyboard
 
 #TODO: add long term memory
 #TODO: add true automation E.g. using @Jarvis.listener
@@ -214,7 +215,7 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
   if backgroundlistener == InputMode.TEXT_BOX:
     voicebox.startTextboxListener()
   elif backgroundlistener == InputMode.VOICE:
-    voicebox.startVoiceListener()
+    startInbuiltVoiceListener(hotkey = speechHotkey)
 
   return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented)
 
@@ -239,8 +240,6 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
   if not(os.path.isdir(FILEPATH)):
     os.mkdir(FILEPATH)
     makeHidden(FILEPATH)
-  
-  voicebox.HOTKEY = speechHotkey
 
   frame = inspect.currentframe().f_back
   filename = inspect.getframeinfo(frame)[0]
@@ -315,7 +314,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     if backgroundlistener == InputMode.TEXT_BOX:
       voicebox.startTextboxListener()
     elif backgroundlistener == InputMode.VOICE:
-      voicebox.startVoiceListener()
+      startInbuiltVoiceListener(hotkey = speechHotkey)
 
     runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented, runningmode=runningmode)
   
@@ -373,7 +372,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     if backgroundlistener == InputMode.TEXT_BOX:
       voicebox.startTextboxListener()
     elif backgroundlistener == InputMode.VOICE:
-      voicebox.startVoiceListener()
+      startInbuiltVoiceListener(hotkey = speechHotkey)
 
     runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented, runningmode=runningmode)
     
@@ -434,6 +433,27 @@ def checkRequestQueue():
   else:
     return requestQueue.pop(0)
 
+def startInbuiltVoiceListener(hotkey = "alt+j"):
+  try:
+    keyboard.clear_all_hotkeys()
+  except AttributeError:
+    pass
+  initiateVoiceListener()
+  keyboard.add_hotkey(hotkey, startRecording)
+  keyboard.on_release_key(hotkey.split("+")[-1], stopRecordingWithArg)
+
+def initiateVoiceListener():
+  voicebox.initiateVoiceListenerThread()
+
+def startRecording():
+  voicebox.startListening()
+
+def stopRecording():
+  voicebox.stopListening()
+
+def stopRecordingWithArg(arg):
+  """Use this function to get out of the fact that on_release_key gives an argument"""
+  stopRecording()
 
 def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inmode, outputfunc, outputasync, personalityimplemented, runningmode):
   global startWaitingTime
