@@ -8,7 +8,7 @@ import os
 from pydub import AudioSegment
 import sys
 
-class Recorder:
+class Recorder: # Thx chatgpt
     def __init__(self, filename="recording"):
         self.frames = queue.Queue()
         self.samplerate = 44100
