@@ -443,13 +443,15 @@ def startInbuiltVoiceListener(hotkey = "alt+j"):
   keyboard.on_release_key(hotkey.split("+")[-1], stopRecordingWithArg)
 
 def initiateVoiceListener():
-  voicebox.initiateVoiceListenerThread()
+  voicebox.initiateVoiceListener()
 
 def startRecording():
-  voicebox.startListening()
+  if not voicebox.listening:
+    voicebox.startRecording()
 
 def stopRecording():
-  voicebox.stopListening()
+  if voicebox.listening:
+    voicebox.stopRecording()
 
 def stopRecordingWithArg(arg):
   """Use this function to get out of the fact that on_release_key gives an argument"""
