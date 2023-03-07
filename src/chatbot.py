@@ -45,8 +45,9 @@ class API():
         return f"API {self.number}: {self.link}"
 
 class Function():
-    def __init__(self, function: str, args=[], kwargs={}, typeannots={}, description=None, priority=False):
-        self.function = function
+    def __init__(self, function, args=[], kwargs={}, typeannots={}, description=None, priority=False):
+        self.function = function.__name__
+        self.truefunction = function
         self.args = args
         self.kwargs = kwargs
         self.typeannots = typeannots
@@ -168,22 +169,26 @@ class ChatBot():
 
 
             if choice == "R":
-                readnumber = readnumbers[0]
+                readnumber = -1
                 for readablenumber in readnumbers:
                     chosenreadable = self.getReadFromNumber(readablenumber)
                     if chosenreadable.function == restofresponse.split("(")[0]:
                         readnumber = readablenumber
                 chosenread = self.getReadFromNumber(readnumber)
+                if chosenread == None:
+                    chosenread = Function(None)
                 chosenreadtorun = restofresponse
                 response = [chosenread, chosenreadtorun]
 
             elif choice == "F":
-                funcnumber = funcnumbers[0]
+                funcnumber = -1
                 for functionnumber in funcnumbers:
                     chosenfunc = self.getFuncFromNumber(functionnumber)
                     if chosenfunc.function == restofresponse.split("(")[0]:
                         funcnumber = functionnumber
                 chosenfunction = self.getFuncFromNumber(funcnumber)
+                if chosenfunction == None:
+                    chosenfunction = Function(None)
                 chosenfunctiontorun = restofresponse
                 response = [chosenfunction, chosenfunctiontorun]
 

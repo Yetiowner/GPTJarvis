@@ -30,6 +30,10 @@ functionlist = []
 opqueue = []
 requestQueue = []
 apiKey = None
+
+allreadables = []
+allrunnables = []
+
 FILEPATH = ".Jarvis/"
 UNLIKELYNAMESPACECOLLIDABLE = "ThereIsAFunctionHereASDFASDFASDFASDFASDF"
 UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
@@ -67,22 +71,36 @@ def priority(func):
   return wrapper
 
 def runnable(func):
+  global allrunnables
+
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
     return func(*args, **kwargs)
   
   wrapper.runnable = True
   wrapper.func = func
+  allrunnables.append(wrapper)
   return wrapper
 
 def readable(func):
+  global allreadables
+
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
     return func(*args, **kwargs)
   
   wrapper.readable = True
   wrapper.func = func
+  allreadables.append(wrapper)
   return wrapper
+
+def addReadables(*funcs):
+  for func in funcs:
+    readable(func)
+
+def addRunnables(*funcs):
+  for func in funcs:
+    runnable(func)
 
 def update():
   global opqueue
@@ -101,7 +119,7 @@ def update():
           if result == None:
             result = "Success!"
         except Exception as e:
-          result = "Opperation failed: " + str(e)
+          result = "Operation failed: " + str(e)
     #while True:
     print(UNLIKELYNAMESPACECOLLIDABLE1+str(bytes(str(result), encoding='utf8')))
     sys.stdout.flush()
@@ -171,14 +189,8 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
   frame = inspect.currentframe().f_back
   module = inspect.getmodule(frame)
 
-  functions = [getattr(module, a) for a in dir(module) if isinstance(getattr(module, a), types.FunctionType)]
-  readables = []
-  runnables = []
-  for item in functions:
-    if getattr(item, "runnable", False):
-      runnables.append(item)
-    if getattr(item, "readable", False):
-      readables.append(item)
+  runnables = allrunnables
+  readables = allreadables
   
   for functype in [runnables, readables]:
     out = []
@@ -188,7 +200,7 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
         priority = True
       else:
         priority = False
-      out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+      out.append([func, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
 
     funced = []
     for func in out:
@@ -346,7 +358,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
             priority = True
           else:
             priority = False
-          out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+          out.append([func, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
 
         funced = []
         for func in out:
@@ -532,7 +544,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
       
       else:
 
-        output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode)
+        output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode, result[0])
 
         if result[0].mode == "R":
           explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
@@ -558,8 +570,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
             chosenchatbot.addAnswer(result)
 
         elif result[0].mode == "F":
-          explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output if len(output) < 100 else 'Truncated as too long'}"
-          explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running opperation: {output}"
+          explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running operation: {output if len(output) < 100 else 'Truncated as too long'}"
+          explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running operation: {output}"
 
           if result[0].showFunction() not in explainedlist:
             explainedOutputFull += f" Where {result[0].showFunction()}"
@@ -591,7 +603,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
     
 
 
-def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode):
+def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode, function: chatbot.Function):
   if runningmode == RunningMode.ASYNC:
     chosenprocess.stdin.write(thingtorun+"\n")
     chosenprocess.stdin.flush()
@@ -605,14 +617,13 @@ def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode):
         validoutput = True
   elif runningmode == RunningMode.SYNC:
     try:
-      localscopy = locals()
-      result = eval(f"chosenprocess.{thingtorun}", localscopy)
+      result = eval(f"{thingtorun}", {thingtorun.split("(")[0]: function.truefunction})
       if result == None:
         result = "Success!"
       else:
         result = str(result)
     except Exception as e:
-      result = "Opperation failed: " + str(e)
+      result = "Operation failed: " + str(e)
     output = result
   return output
 
@@ -626,21 +637,8 @@ def listenForRunCommand():
       pass
 
 def init():
-  frame = inspect.stack()[1]
-  module = inspect.getmodule(frame[0])
-  if "-JarvisSubprocess" not in sys.argv:
-    #return
-    pass
-  diagnostics = []
-  functions = [getattr(module, a) for a in dir(module) if isinstance(getattr(module, a), types.FunctionType)]
-  diagnostics.append(functions)
-  readables = []
-  runnables = []
-  for item in functions:
-    if getattr(item, "runnable", False):
-      runnables.append(item)
-    if getattr(item, "readable", False):
-      readables.append(item)
+  runnables = allrunnables
+  readables = allreadables
 
 
   displayFunctions(runnables)
@@ -657,7 +655,7 @@ def displayFunctions(functions):
       priority = True
     else:
       priority = False
-    out.append([func.__name__, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+    out.append([func, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
   print(UNLIKELYNAMESPACECOLLIDABLE + str(out))
   sys.stdout.flush()
   
