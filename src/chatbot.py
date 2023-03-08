@@ -1,9 +1,7 @@
 import time
-import os
 from typing import Union, Optional, Callable, List
 import types
 import openai
-import requests
 import GPTJarvis.src.extracttxt as extracttxt
 import re
 import time

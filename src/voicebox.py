@@ -10,14 +10,10 @@ import soundfile as sf
 import pyrubberband as pyrb # https://breakfastquay.com/rubberband/index.html Install CLU and add to path
 import subprocess
 from pydub.playback import play
-import speech_recognition as sr
-import io
-import keyboard
 import threading
 import tkinter
 import openai
 from waiting import wait
-import random
 
 FILEPATH = ".Jarvis/"
 HOTKEY = "alt+j"
