@@ -41,7 +41,7 @@ chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
 class App:
-  def __init__(self, chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented):
+  def __init__(self, chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync):
     self.chosenchatbot = chosenchatbot
     self.function_module_relationship = function_module_relationship
     self.memory_retention_time = memory_retention_time
@@ -49,7 +49,6 @@ class App:
     self.backgroundlistener = backgroundlistener
     self.outputfunc = outputfunc
     self.outputasync = outputasync
-    self.personalityimplemented = personalityimplemented
 
 class InputMode(Enum):
   VOICE = "v"
@@ -130,7 +129,7 @@ def update_app(app: App):
   startWaitingTime = time.time()
   backgroundlistener = app.backgroundlistener
   outputfunc = app.outputfunc
-  runProcess(app.chosenchatbot, app.function_module_relationship, app.memory_retention_time, app.personality, backgroundlistener, outputfunc, app.outputasync, app.personalityimplemented, RunningMode.SYNC)
+  runProcess(app.chosenchatbot, app.function_module_relationship, app.memory_retention_time, app.personality, backgroundlistener, outputfunc, app.outputasync, RunningMode.SYNC)
 
 def loadApiKeyFromFile(openai_key_path):
   with open(openai_key_path, "r") as f:
@@ -145,7 +144,7 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, personalityimplemented = True, speechHotkey = "alt+j"):
+def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
 
   allinfo = []
   if includePersonalInfo and config.loadPersonalInfo() != None:
@@ -229,10 +228,10 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
   elif backgroundlistener == InputMode.VOICE:
     startInbuiltVoiceListener(hotkey = speechHotkey)
 
-  return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented)
+  return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync)
 
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, personalityimplemented = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
     scope = [scope]
 
@@ -328,7 +327,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     elif backgroundlistener == InputMode.VOICE:
       startInbuiltVoiceListener(hotkey = speechHotkey)
 
-    runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented, runningmode=runningmode)
+    runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode=runningmode)
   
   elif runningmode == RunningMode.SYNC:
     function_module_relationship = []
@@ -386,7 +385,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     elif backgroundlistener == InputMode.VOICE:
       startInbuiltVoiceListener(hotkey = speechHotkey)
 
-    runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented, runningmode=runningmode)
+    runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode=runningmode)
     
 
 
@@ -425,14 +424,14 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented, runningmode=RunningMode.SYNC):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode=RunningMode.SYNC):
   global startWaitingTime
 
   startWaitingTime = time.time()
   backgroundlistener = backgroundlistener
   print("Ready")
   while True:
-    runProcess(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, personalityimplemented, runningmode)
+    runProcess(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode)
 
 def submitRequest(request: str):
   global requestQueue
@@ -469,7 +468,7 @@ def stopRecordingWithArg(arg):
   """Use this function to get out of the fact that on_release_key gives an argument"""
   stopRecording()
 
-def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inmode, outputfunc, outputasync, personalityimplemented, runningmode):
+def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inmode, outputfunc, outputasync, runningmode):
   global startWaitingTime
 
   qText = checkRequestQueue()
@@ -481,6 +480,14 @@ def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, me
     print("Breaking conversation.")
     chosenchatbot.breakConversation()
   ans1 = createQuery(qText, chosenchatbot, function_process_relationship, runningmode)
+
+  personalityimplemented = False
+  try:
+      sig = inspect.signature(outputfunc)
+      if "personality" in sig.parameters:
+          personalityimplemented = True
+  except ValueError:
+      pass
 
   if outputasync:
     if personalityimplemented:
