@@ -1,7 +1,7 @@
 import math
 from GPTJarvis import Jarvis, personalities
 
-Jarvis.addReadables(math.sin, math.cos, math.tan, math.sqrt)#, math.log)
+Jarvis.addReadables(math.sin, math.cos, math.tan, math.sqrt, math.log, math.sinh, math.tanh, math.cosh, math.asin, math.acos, math.atan, math.acosh, math.asinh, math.atanh, math.degrees, math.radians)
 
 app = Jarvis.init_app(
   appinfo = "This app does maths.",

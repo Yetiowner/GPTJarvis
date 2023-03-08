@@ -43,30 +43,22 @@ class API():
         return f"API {self.number}: {self.link}"
 
 class Function():
-    def __init__(self, function, args=[], kwargs={}, typeannots={}, description=None, priority=False):
-        self.function = function.__name__
+    def __init__(self, function, doc, priority=False):
         self.truefunction = function
-        self.args = args
-        self.kwargs = kwargs
-        self.typeannots = typeannots
-        self.description = description
+        self.function = function.__name__
+        self.doc = doc
         self.number = 0
         self.priority = priority
         self.mode = None
     
     def showFunction(self):
-        return f"{self.mode} {self.function}({', '.join(self.args)}) With {len(self.args)} arguments.{' Description: ' + self.description if self.description else ''}"
+        return f"{self.mode} {self.doc}"
     
     def __repr__(self):
-        return f"Func {self.number}: {self.function}"
+        return f"Func {self.number}: {self.doc}"
     
     def showSimplifiedFunction(self):
-        #return f"{self.function}({', '.join(self.args)})"
-        if self.description != None:
-            return f"{self.function} with arguments {', '.join(self.args)} Where: " + self.description
-        
-        else:
-            return f"{self.function} with arguments {', '.join(self.args)}"
+        return f"{self.mode} {self.doc}"
 
 
 class ChatBot():

@@ -199,7 +199,7 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
         priority = True
       else:
         priority = False
-      out.append([func, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+      out.append([func, getFullDoc(func), priority])
 
     funced = []
     for func in out:
@@ -357,7 +357,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
             priority = True
           else:
             priority = False
-          out.append([func, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+          out.append([func, getFullDoc(func), priority])
 
         funced = []
         for func in out:
@@ -654,6 +654,15 @@ def init():
   thread = threading.Thread(target=listenForRunCommand)
   thread.start()
 
+def getFullDoc(my_function):
+  try:
+    function_signature = inspect.signature(my_function)
+    function_definition = f"{my_function.__name__}{function_signature}"
+    docstring_with_definition = f"{function_definition}\n{my_function.__doc__}"
+    return docstring_with_definition
+  except:
+    return my_function.__doc__
+
 def displayFunctions(functions):
   out = []
   for function in functions:
@@ -662,7 +671,7 @@ def displayFunctions(functions):
       priority = True
     else:
       priority = False
-    out.append([func, inspect.getfullargspec(func).args, {}, {i: j.__name__ for i, j in get_type_hints(func).items()}, func.__doc__, priority])
+    out.append([func, getFullDoc(func), priority])
   print(UNLIKELYNAMESPACECOLLIDABLE + str(out))
   sys.stdout.flush()
   
