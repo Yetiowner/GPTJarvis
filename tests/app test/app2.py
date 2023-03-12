@@ -9,7 +9,8 @@ app = Jarvis.init_app(
   openai_key = None,
   temperature = 0.6,
   minSimilarity = 0.65,
-  backgroundlistener = Jarvis.InputMode.TEXT_BOX
+  backgroundlistener = Jarvis.InputMode.TEXT_BOX,
+  outputfunc = print
 )
 
 while True:

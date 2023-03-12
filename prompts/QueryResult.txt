@@ -5,7 +5,7 @@ Here is some information:
 ---------------------------system,example_user
 What is time in london? 
 ---------------------------system,example_assistant
-R getTime("London")
+R_getTime("London")
 ---------------------------system,example_user
 Hello.
 ---------------------------system,example_assistant
@@ -13,26 +13,35 @@ N Hello.
 ---------------------------system,example_user
 How old will I be in 5 years?
 ---------------------------system,example_assistant
-R getuserAge()
+R_getuserAge()
 ---------------------------system,example_user
 Is it currently warmer in detroit or in madagascar?
 ---------------------------system,example_assistant
-R getTemperature(42.3314, 83.0458) # Temperature in detroit
-R getTemperature(18.7699, 46.8691) # Temperature in madagascar
+R_getTemperature(42.3314, 83.0458) # Temperature in detroit
+R_getTemperature(18.7699, 46.8691) # Temperature in madagascar
 C Which is warmer?
 ---------------------------system,example_user
 Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
 ---------------------------system,example_assistant
-F saveProgram()
-F quitProgram()
+F_saveProgram()
+F_quitProgram()
 N foo, bar, baz
-R getTabOpenNumber()
+R_getTabOpenNumber()
 C Are there are more than 8 open tabs? If so, reopen the program.
 ---------------------------system,example_user
 Me: Get the time zone at the latitude and longitude of the number of questions I have asked.
 ---------------------------system,example_assistant
 C How many questions have I asked?
 C Using the information I have given you, get the time zone at the latitude and longitude of that number.
+---------------------------system,example_user
+accessors: R_getSalary()
+Function that returns the user's salary in dollars
+R_convCurrency(currencyname, amount, outcurrencyname)
+Function that converts a currency of currencyname of the amount "amount" into the out currency.
+
+Me: What is my salary in bitcoin?
+---------------------------system,example_assistant
+R_convCurrency("$", R_getSalary(), "BTC")
 ---------------------------user
 Here is a list of accessors: {accessors}.
 

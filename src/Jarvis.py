@@ -144,7 +144,7 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
+def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
 
   allinfo = []
   if includePersonalInfo and config.loadPersonalInfo() != None:
@@ -231,7 +231,7 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
   return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync)
 
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 3, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
     scope = [scope]
 
@@ -554,8 +554,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
         output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode, result[0])
 
         if result[0].mode == "R":
-          explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
-          explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult: {output}"
+          explainedOutput = f"Your response: {result[0].mode}_{thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
+          explainedOutputFull = f"Your response: {result[0].mode}_{thingtorun} \n\nResult: {output}"
 
           if result[0].showFunction() not in explainedlist:
             explainedOutputFull += f" Where {result[0].showFunction()}"
@@ -577,8 +577,8 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
             chosenchatbot.addAnswer(result)
 
         elif result[0].mode == "F":
-          explainedOutput = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running operation: {output if len(output) < 100 else 'Truncated as too long'}"
-          explainedOutputFull = f"Your response: {result[0].mode} {thingtorun} \n\nResult of running operation: {output}"
+          explainedOutput = f"Your response: {result[0].mode}_{thingtorun} \n\nResult of running operation: {output if len(output) < 100 else 'Truncated as too long'}"
+          explainedOutputFull = f"Your response: {result[0].mode}_{thingtorun} \n\nResult of running operation: {output}"
 
           if result[0].showFunction() not in explainedlist:
             explainedOutputFull += f" Where {result[0].showFunction()}"
