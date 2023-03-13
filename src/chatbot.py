@@ -12,6 +12,10 @@ import json
 from GPTJarvis.src.utils import loadPrompt
 import GPTJarvis.src.personalities as personalities
 
+"""C_describe(): describe a variable as a string
+C_say(): output a string
+C_interpret(): asks question about output and returns the answer in the method requested"""
+
 MODEL = "gpt-3.5-turbo"
 PERMANENTINFO = loadPrompt("PermanentInfo.txt", mode = "text")
 FILEPATH = None
@@ -144,7 +148,8 @@ class ChatBot():
         logUsage(response)
 
 
-        superresponse = response["choices"][0]["message"]["content"].lstrip().rstrip().split("\n")
+        superresponse = response["choices"][0]["message"]["content"].lstrip().rstrip()
+        return superresponse
 
         responses = []
 

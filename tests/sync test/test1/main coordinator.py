@@ -6,7 +6,7 @@ Jarvis.init_main(
   openai_key = Jarvis.loadApiKeyFromFile("secret.txt"),
   temperature = 0.6,
   minSimilarity = 0.65,
-  backgroundlistener = Jarvis.InputMode.VOICE,
+  backgroundlistener = Jarvis.InputMode.TEXT_BOX,
   outputfunc=print,
   outputasync=False,
 )

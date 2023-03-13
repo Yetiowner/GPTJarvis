@@ -505,6 +505,8 @@ def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, me
 
 def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True, information_for_chaining = None):
   resultset = chosenchatbot.query(string, chaining, information_for_chaining)
+  print(resultset)
+  quit()
   chosenchatbot.addQuestion(string)
   print(resultset)
 

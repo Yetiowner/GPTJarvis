@@ -5,34 +5,45 @@ Here is some information:
 ---------------------------system,example_user
 What is time in london? 
 ---------------------------system,example_assistant
-R_getTime("London")
+time = R_getTime("London")
+C_say(f"The time in london is {time}")
 ---------------------------system,example_user
 Hello.
 ---------------------------system,example_assistant
-N Hello.
+C_say("Hello.")
 ---------------------------system,example_user
 How old will I be in 5 years?
 ---------------------------system,example_assistant
-R_getuserAge()
+age = R_getuserAge()
+newage = age+5
+C_say(f"Your age in 5 years will be {newage}")
 ---------------------------system,example_user
 Is it currently warmer in detroit or in madagascar?
 ---------------------------system,example_assistant
-R_getTemperature(42.3314, 83.0458) # Temperature in detroit
-R_getTemperature(18.7699, 46.8691) # Temperature in madagascar
-C Which is warmer?
+detroit = R_getWeather(42.3314, 83.0458)
+madagascar = R_getWeather(18.7699, 46.8691)
+better_weather = C_interpret("Which is warmer?", arguments=[detroit, madagascar], description = "First value: temperature in detroit, second value: temperature in madagascar.", returns = "A string of which place is warmer")
+C_say(f"The better weather is at {better_weather}")
 ---------------------------system,example_user
 Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
 ---------------------------system,example_assistant
 F_saveProgram()
 F_quitProgram()
-N foo, bar, baz
-R_getTabOpenNumber()
-C Are there are more than 8 open tabs? If so, reopen the program.
+C_say("foo, bar, baz")
+tabnumber = R_getTabOpenNumber()
+if tabnumber > 8:
+    F_reopenProgram()
 ---------------------------system,example_user
+Previous questions:
+Me: Hi
+You: Hi
+Me: Ho
+You: Ho
+
 Me: Get the time zone at the latitude and longitude of the number of questions I have asked.
 ---------------------------system,example_assistant
-C How many questions have I asked?
-C Using the information I have given you, get the time zone at the latitude and longitude of that number.
+timezone = R_getTimeZone(2, 2)
+C_say(f"The time-zone at these coordinates is {timezone}")
 ---------------------------system,example_user
 accessors: R_getSalary()
 Function that returns the user's salary in dollars
@@ -41,17 +52,66 @@ Function that converts a currency of currencyname of the amount "amount" into th
 
 Me: What is my salary in bitcoin?
 ---------------------------system,example_assistant
-R_convCurrency("$", R_getSalary(), "BTC")
+btc_amount = R_convCurrency("$", R_getSalary(), "BTC")
+C_say(f"Your currency in bitcoin is {btc_amount}")
+---------------------------system,example_user
+accessors: R_foo()
+Function that returns a list of prime integers
+R_randomNumber(start, end)
+Function that returns a random number between the start and end.
+
+Me: Pick a random number. Is it prime?
+---------------------------system,example_assistant
+primes = R_foo()
+num = R_randomNumber(0, 10)
+if num in primes:
+    C_say(f"The number {num} is prime!")
+else:
+    C_say(f"The number {num} is not prime!")
+---------------------------system,example_user
+My name: John Doe
+
+Me: What is my name?
+---------------------------system,example_assistant
+C_say(f"Your name is John Doe")
+---------------------------system,example_user
+Accessors: R_google(string) returns a string of the output
+Me: Which Beatle was born latest?
+---------------------------system,example_assistant
+googlesearch = R_google("Beatles birth dates")
+birthYears = C_interpret("What are the ages of the beatles?", [googlesearch], description = "First value: the output string from googling the ages of the beatles", returns = "A dictionary of the name of the beatle followed by the birth year, e.g. {'Ringo Starr': 2022}")
+youngest = None
+youngestDate = -1
+for beatle in birthYears:
+    if birthYears[beatle] > youngestDate:
+        youngestDate = birthYears[beatle]
+        youngest = beatle
+
+C_say(f"The youngest beatle is {youngest} who was born in {youngestDate}")
+---------------------------system,example_user
+Accessors: R_square(integer)
+Me: square the integers from 1 to 10
+---------------------------system,example_assistant
+out = []
+for i in range(1, 10):
+    out.append(R_square(i))
+description = C_describe(out, method = "Describe each individual item. E.g. 'the first number is one, etc'")
+C_say(f"I have successfully squared each number from 1 to 10. Result: {description}")
 ---------------------------user
 Here is a list of accessors: {accessors}.
 
 Here is a list of functions that can perform an action: {functions}
 
-Only pick one of the accessors or the functions I gave you above, put an R or F before it depending on which it is, or if neither work, just reply "N" followed by your response as the character I told you to be. Answer questions using information from previous results. Only use the accessors and functions I have given you.
-<chain>If the request should be split into parts, reply with the request split over multiple lines, and if the AI needs to make a decision, add a line with a "C" followed by the plain english instruction for comparrison. Only use the accessors and functions I have given you. For example, if I request you do something to multiple items, reply with that function/accessor on each line for each item.
-Fill it with precicely the specified number of arguments. Use Python syntax.
+Write python code to answer the question using the format given above. Answer questions using information from previous results.
+If you need to say something, use the C_say(string) function.
+If you have values in a form that cannot be used in a calculation, and need to extract information from it, e.g. an integer from a string, or a boolean from a string, use the function C_interpret(question, arguments, description, returns), where question is the thing query to interpret, e.g. "is the sentiment positive or negative", arguments is a list of inputs that need to be interpretted, description describes the arguments, and returns describes the data-type to return.
+If you have values in a form that won't be easy to C_say, then use C_describe(data, method), which returns a string describing the datatype, in the form described by method, e.g. "Describe the items one by one"
 
-I am about to give you a request. Respond precisely in the manner I have told you to, only replying with one of the options.
+You can use python syntax including if statements and for loops if you wish to branch/itterate.
+
+Fill accessors and functions with precicely the specified number of arguments. Use Python syntax.
+
+I am about to give you a request. Respond precisely in the manner I have told you to.
 
 Information to use:
 {information_for_chaining}
