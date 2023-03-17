@@ -15,6 +15,7 @@ import GPTJarvis.src.voicebox as voicebox
 import GPTJarvis.src.chatbot as chatbot
 import GPTJarvis.src.personalities as personalities
 import GPTJarvis.src.config as config
+import GPTJarvis.src.codechecker as codechecker
 import ctypes
 import functools
 import importlib.util
@@ -40,20 +41,27 @@ UNLIKELYNAMESPACECOLLIDABLE1 = "ReturningDataOfFunctionASDFASDFASDFASDFASDF"
 chatbot.FILEPATH = FILEPATH
 voicebox.FILEPATH = FILEPATH
 
+class JarvisBecameEvilError(Exception):
+  """Raised when Jarvis attempts to run dangerous code.
+"Oopsie Daisy" """
+  def __init__(self, message):
+    self.message = message
+    super().__init__(self.message)
+
 class App:
-  def __init__(self, chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync):
+  def __init__(self, chosenchatbot, function_module_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync):
     self.chosenchatbot = chosenchatbot
     self.function_module_relationship = function_module_relationship
     self.memory_retention_time = memory_retention_time
     self.personality = personality
-    self.backgroundlistener = backgroundlistener
+    self.inbuiltbackgroundlistener = inbuiltbackgroundlistener
     self.outputfunc = outputfunc
     self.outputasync = outputasync
 
 class InputMode(Enum):
   VOICE = "v"
   TEXT_BOX = "t"
-  NONE = "n"
+  NONE = None
 
 class RunningMode(Enum):
   SYNC = "sync"
@@ -127,9 +135,9 @@ def update_app(app: App):
   global startWaitingTime
 
   startWaitingTime = time.time()
-  backgroundlistener = app.backgroundlistener
+  inbuiltbackgroundlistener = app.inbuiltbackgroundlistener
   outputfunc = app.outputfunc
-  runProcess(app.chosenchatbot, app.function_module_relationship, app.memory_retention_time, app.personality, backgroundlistener, outputfunc, app.outputasync, RunningMode.SYNC)
+  runProcess(app.chosenchatbot, app.function_module_relationship, app.memory_retention_time, app.personality, inbuiltbackgroundlistener, outputfunc, app.outputasync, RunningMode.SYNC)
 
 def loadApiKeyFromFile(openai_key_path):
   with open(openai_key_path, "r") as f:
@@ -144,7 +152,7 @@ def loadInfoFromFile(info_path):
 def setKey(key):
   chatbot.apikey = key
 
-def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
+def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
 
   allinfo = []
   if includePersonalInfo and config.loadPersonalInfo() != None:
@@ -223,15 +231,15 @@ def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, samp
 
   chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
 
-  if backgroundlistener == InputMode.TEXT_BOX:
+  if inbuiltbackgroundlistener == InputMode.TEXT_BOX:
     voicebox.startTextboxListener()
-  elif backgroundlistener == InputMode.VOICE:
+  elif inbuiltbackgroundlistener == InputMode.VOICE:
     startInbuiltVoiceListener(hotkey = speechHotkey)
 
-  return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync)
+  return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync)
 
 
-def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, backgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
+def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
     scope = [scope]
 
@@ -322,12 +330,12 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
 
     startStreamingOutput()
 
-    if backgroundlistener == InputMode.TEXT_BOX:
+    if inbuiltbackgroundlistener == InputMode.TEXT_BOX:
       voicebox.startTextboxListener()
-    elif backgroundlistener == InputMode.VOICE:
+    elif inbuiltbackgroundlistener == InputMode.VOICE:
       startInbuiltVoiceListener(hotkey = speechHotkey)
 
-    runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode=runningmode)
+    runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=runningmode)
   
   elif runningmode == RunningMode.SYNC:
     function_module_relationship = []
@@ -380,12 +388,12 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     
     chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
 
-    if backgroundlistener == InputMode.TEXT_BOX:
+    if inbuiltbackgroundlistener == InputMode.TEXT_BOX:
       voicebox.startTextboxListener()
-    elif backgroundlistener == InputMode.VOICE:
+    elif inbuiltbackgroundlistener == InputMode.VOICE:
       startInbuiltVoiceListener(hotkey = speechHotkey)
 
-    runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode=runningmode)
+    runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=runningmode)
     
 
 
@@ -424,14 +432,14 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode=RunningMode.SYNC):
+def runProcessMainloop(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=RunningMode.SYNC):
   global startWaitingTime
 
   startWaitingTime = time.time()
-  backgroundlistener = backgroundlistener
+  inbuiltbackgroundlistener = inbuiltbackgroundlistener
   print("Ready")
   while True:
-    runProcess(chosenchatbot, function_process_relationship, memory_retention_time, personality, backgroundlistener, outputfunc, outputasync, runningmode)
+    runProcess(chosenchatbot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode)
 
 def submitRequest(request: str):
   global requestQueue
@@ -504,9 +512,14 @@ def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, me
   #voicebox.say(ans1, mode = outputfunc, personality = personality)
 
 def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True, information_for_chaining = None):
-  resultset = chosenchatbot.query(string, chaining, information_for_chaining)
-  print(resultset)
-  quit()
+  thingtorun = chosenchatbot.query(string, chaining, information_for_chaining)
+  output = sendAndReceive(thingtorun, runningmode, chosenchatbot)
+  chosenchatbot.register_addHistory(f"My query: {string}")
+  chosenchatbot.register_addHistory(f"Your response: {output}")
+  chosenchatbot.addHistory()
+  print(output)
+  print(thingtorun)
+  return
   chosenchatbot.addQuestion(string)
   print(resultset)
 
@@ -553,7 +566,7 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
       
       else:
 
-        output = sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode, result[0])
+        output = sendAndReceive(chosenprocess, thingtorun, runningmode, result[0])
 
         if result[0].mode == "R":
           explainedOutput = f"Your response: {result[0].mode}_{thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
@@ -612,21 +625,10 @@ def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relatio
     
 
 
-def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode, function: chatbot.Function):
-  if runningmode == RunningMode.ASYNC:
-    chosenprocess.stdin.write(thingtorun+"\n")
-    chosenprocess.stdin.flush()
-    validoutput = False
-    while not(validoutput):
-      output = chosenprocess.stdout.readline()
-      if output.startswith(UNLIKELYNAMESPACECOLLIDABLE1):
-        output = list(eval(output[len(UNLIKELYNAMESPACECOLLIDABLE1):]))
-        output = bytes(output).decode("utf-8")
-        output = output.strip()
-        validoutput = True
-  elif runningmode == RunningMode.SYNC:
+def sendAndReceive(thingtorun, runningmode, chatbot):
+  if runningmode == RunningMode.SYNC:
     try:
-      result = eval(f"{thingtorun}", {thingtorun.split("(")[0]: function.truefunction})
+      result = runCode(thingtorun, chatbot)
       if result == None:
         result = "Success!"
       else:
@@ -635,6 +637,47 @@ def sendAndReceiveFromFunction(chosenprocess, thingtorun, runningmode, function:
       result = "Operation failed: " + str(e)
     output = result
   return output
+
+def runnableHiddenDecorator(func):
+
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    return func(*args, **kwargs)
+  
+  return wrapper
+
+def readableHiddenDecorator(func):
+
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    return func(*args, **kwargs)
+  
+  return wrapper
+
+def C_describe(dataToDescribe, method):
+  pass
+
+def C_say(string):
+  pass
+
+def C_interpret(question, arguments, description, returns):
+  pass
+
+def runCode(thingtorun, chatbot: chatbot.ChatBot):
+  readables = chatbot.readables
+  functions = chatbot.functions
+
+  globalsforrunning = {"C_describe": C_describe, "C_say": C_say, "C_interpret": C_interpret}
+
+  for funcset, functype in [(readables, "R"), (functions, "F")]:
+    for func in funcset:
+      globalsforrunning[functype + "_" + func.function] = func.truefunction
+  
+  detector = codechecker.DangerousCodeDetector()
+  safe = detector.check(thingtorun)
+  if not(safe[0]):
+    raise JarvisBecameEvilError(safe[1])
+  exec(thingtorun, globalsforrunning)
 
 def listenForRunCommand():
   global opqueue

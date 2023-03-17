@@ -1,7 +1,7 @@
 import ast
 import builtins
 
-TRUSTED_MODULES = ['math', 'numpy', 'pandas', 'datetime', 're', 'itertools', 'collections', 'random', 'string']  # add more as needed
+TRUSTED_MODULES = ['math', 'numpy', 'pandas', 'datetime', 're', 'itertools', 'collections', 'random', 'string', 'time']  # add more as needed
 DANGEROUS_FUNCS = ['eval', 'exec', 'compile', 'open', 'input', 'setattr', 'getattr', '__import__']
 
 class DangerousCodeDetector(ast.NodeVisitor):
@@ -55,16 +55,3 @@ class DangerousCodeDetector(ast.NodeVisitor):
             return False, self.reason
 
         return True, None
-
-
-
-
-d = DangerousCodeDetector()
-
-string = """def add(a, b):
-    return a + b
-
-result = add(1, 2)
-print(result)"""
-
-print(d.check(string))

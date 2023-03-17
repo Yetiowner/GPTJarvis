@@ -119,3 +119,5 @@ Information to use:
 The conversation:
 {q_and_a_history}
 My query: {prompt}
+
+Your response:

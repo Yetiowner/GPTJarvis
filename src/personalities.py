@@ -17,4 +17,4 @@ def loadPersonality(name):
 
 JARVIS = loadPersonality("Jarvis")
 FRIDAY = loadPersonality("Friday")
-ULTRON = loadPersonality("Ultron")
+NONE = loadPersonality("None")

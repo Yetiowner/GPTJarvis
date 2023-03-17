@@ -58,7 +58,7 @@ app = Jarvis.init_app(
   openai_key = None,
   temperature = 0.6,
   minSimilarity = 0.65,
-  backgroundlistener = Jarvis.InputMode.NONE
+  inbuiltbackgroundlistener = Jarvis.InputMode.NONE
 )
 while True:
   Jarvis.update_app(app)
