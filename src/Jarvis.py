@@ -66,6 +66,197 @@ class RunningMode(Enum):
   SYNC = "sync"
   ASYNC = "async"
 
+class JarvisApp:
+  def __init__(self, appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
+    
+    self.appinfo = appinfo
+    self.includePersonalInfo = includePersonalInfo
+    self.openai_key = openai_key
+    info = self.genInfo()
+
+    self.configFilePaths()
+    self.configAPIkey()
+    
+    voicebox.HOTKEY = speechHotkey
+
+    functions, readables = self.getFunctions()
+
+    if inbuiltbackgroundlistener == InputMode.TEXT_BOX:
+      voicebox.startTextboxListener()
+    elif inbuiltbackgroundlistener == InputMode.VOICE:
+      startInbuiltVoiceListener(hotkey = speechHotkey)
+
+    self.chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
+    self.memory_retention_time = memory_retention_time
+    self.personality = personality
+    self.inbuiltbackgroundlistener = inbuiltbackgroundlistener
+    self.outputfunc = outputfunc
+    self.outputasync = outputasync
+    self.runningmode = RunningMode.SYNC
+  
+  def getFunctions(self):
+    self.function_module_relationship = []
+    allvariables = []
+    modulevariables = []
+
+    frame = inspect.currentframe().f_back
+    module = inspect.getmodule(frame)
+
+    runnables = allrunnables
+    readables = allreadables
+    
+    for functype in [runnables, readables]:
+      out = []
+      for function in functype:
+        func = function.func
+        if getattr(function, "priority", False):
+          priority = True
+        else:
+          priority = False
+        out.append([func, getFullDoc(func), priority])
+
+      funced = []
+      for func in out:
+        funced.append(chatbot.Function(*func))
+      for func in funced:
+        self.function_module_relationship.append([func, module])
+      modulevariables.append(funced)
+    
+    allvariables.append(modulevariables)
+    
+    functions = []
+    readables = []
+    for modulefuncs in allvariables:
+      modulefunctions = modulefuncs[0]
+      modulereadables = modulefuncs[1]
+      for i in modulefunctions:
+        functions.append(i)
+      for i in modulereadables:
+        readables.append(i)
+    
+    return functions, readables
+
+  def configAPIkey(self):
+    if self.openai_key:
+      chatbot.apikey = self.openai_key
+    else:
+      apikey = config.loadApiKey()
+      if not(apikey):
+        raise KeyError("You need to configure an API key to use this app!")
+      chatbot.apikey = apikey
+
+  def configFilePaths(self):
+    if not(os.path.isdir(FILEPATH)):
+      os.mkdir(FILEPATH)
+    
+    try:
+      shutil.rmtree(FILEPATH+"streamedFileOutput")
+    except FileNotFoundError:
+      pass
+    os.mkdir(FILEPATH+"streamedFileOutput")
+
+    makeHidden(FILEPATH)
+    if not(os.path.isdir(FILEPATH)):
+      os.mkdir(FILEPATH)
+      makeHidden(FILEPATH)
+
+  def genInfo(self):
+    allinfo = []
+    if self.includePersonalInfo and config.loadPersonalInfo() != None:
+      allinfo.append("Personal info:\n" + str(config.loadPersonalInfo()))
+    if self.appinfo != None:
+      allinfo.append("App info:\n" + self.appinfo)
+    if allinfo == []:
+      allinfo = ["None"]
+    info = "\n".join(allinfo)
+    return info
+
+  def update(self):
+    self.startWaitingTime = time.time()
+    self.runProcess()
+  
+  def runProcess(self):
+    qText = checkRequestQueue()
+    if qText == None:
+      return
+    timeTaken = time.time()-self.startWaitingTime
+    self.startWaitingTime = time.time()
+    if timeTaken > self.memory_retention_time:
+      print("Breaking conversation.")
+      self.chosenchatbot.breakConversation()
+    ans1 = self.createQuery(qText)
+
+    personalityimplemented = False
+    try:
+        sig = inspect.signature(self.outputfunc)
+        if "personality" in sig.parameters:
+            personalityimplemented = True
+    except ValueError:
+        pass
+
+    if self.outputasync:
+      if personalityimplemented:
+        thread = threading.Thread(target=self.outputfunc, args=(ans1,), kwargs={"personality": self.personality})
+        thread.start()
+      else:
+        thread = threading.Thread(target=self.outputfunc, args=(ans1,))
+        thread.start()
+    else:
+      if personalityimplemented:
+        self.outputfunc(ans1, personality = self.personality)
+      else:
+        self.outputfunc(ans1)
+    #voicebox.say(ans1, mode = outputfunc, personality = personality)
+  
+  def createQuery(self, string):
+    thingtorun = self.chosenchatbot.query(string)
+    output = self.sendAndReceive(thingtorun, self.runningmode, self.chosenchatbot)
+    self.chosenchatbot.addQuestion(string)
+    self.chosenchatbot.addAnswer(thingtorun)
+    print(output)
+    print(thingtorun)
+
+  def C_describe(self, dataToDescribe, method):
+    pass
+
+  def C_say(self, string, variablestoadd = []):
+    pass
+
+  def C_interpret(self, question, arguments, description, returns):
+    pass
+
+  def C_choose(self, list_or_dict, prompt):
+    pass
+
+  def runCode(self, thingtorun, chatbot: chatbot.ChatBot):
+    readables = chatbot.readables
+    functions = chatbot.functions
+
+    globalsforrunning = {"C_describe": self.C_describe, "C_say": self.C_say, "C_interpret": self.C_interpret, "C_choose": self.C_choose}
+
+    for funcset, functype in [(readables, "R"), (functions, "F")]:
+      for func in funcset:
+        globalsforrunning[functype + "_" + func.function] = func.truefunction
+    
+    detector = codechecker.DangerousCodeDetector()
+    safe = detector.check(thingtorun)
+    if not(safe[0]):
+      raise JarvisBecameEvilError(safe[1])
+    exec(thingtorun, globalsforrunning)
+  
+  def sendAndReceive(self, thingtorun, runningmode, chatbot):
+    if runningmode == RunningMode.SYNC:
+      try:
+        result = self.runCode(thingtorun, chatbot)
+        if result == None:
+          result = "Success!"
+        else:
+          result = str(result)
+      except Exception as e:
+        result = "Operation failed: " + str(e)
+      output = result
+    return output
+
 def priority(func):
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
@@ -130,14 +321,6 @@ def update():
     print(UNLIKELYNAMESPACECOLLIDABLE1+str(bytes(str(result), encoding='utf8')))
     sys.stdout.flush()
 
-def update_app(app: App):
-  global startWaitingTime
-
-  startWaitingTime = time.time()
-  inbuiltbackgroundlistener = app.inbuiltbackgroundlistener
-  outputfunc = app.outputfunc
-  runProcess(app.chosenchatbot, app.function_module_relationship, app.memory_retention_time, app.personality, inbuiltbackgroundlistener, outputfunc, app.outputasync, RunningMode.SYNC)
-
 def loadApiKeyFromFile(openai_key_path):
   with open(openai_key_path, "r") as f:
     apikey = f.read()
@@ -150,93 +333,6 @@ def loadInfoFromFile(info_path):
 
 def setKey(key):
   chatbot.apikey = key
-
-def init_app(appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
-
-  allinfo = []
-  if includePersonalInfo and config.loadPersonalInfo() != None:
-    allinfo.append("Personal info:\n" + str(config.loadPersonalInfo()))
-  if appinfo != None:
-    allinfo.append("App info:\n" + appinfo)
-  if allinfo == []:
-    allinfo = ["None"]
-  info = "\n".join(allinfo)
-
-
-  if not(os.path.isdir(FILEPATH)):
-    os.mkdir(FILEPATH)
-  
-  if openai_key:
-    chatbot.apikey = openai_key
-  else:
-    apikey = config.loadApiKey()
-    if not(apikey):
-      raise KeyError("You need to configure an API key to use this app!")
-    chatbot.apikey = apikey
-
-  try:
-    shutil.rmtree(FILEPATH+"streamedFileOutput")
-  except FileNotFoundError:
-    pass
-  os.mkdir(FILEPATH+"streamedFileOutput")
-
-  makeHidden(FILEPATH)
-  if not(os.path.isdir(FILEPATH)):
-    os.mkdir(FILEPATH)
-    makeHidden(FILEPATH)
-  
-  voicebox.HOTKEY = speechHotkey
-  
-
-  function_module_relationship = []
-  allvariables = []
-  modulevariables = []
-
-  frame = inspect.currentframe().f_back
-  module = inspect.getmodule(frame)
-
-  runnables = allrunnables
-  readables = allreadables
-  
-  for functype in [runnables, readables]:
-    out = []
-    for function in functype:
-      func = function.func
-      if getattr(function, "priority", False):
-        priority = True
-      else:
-        priority = False
-      out.append([func, getFullDoc(func), priority])
-
-    funced = []
-    for func in out:
-      funced.append(chatbot.Function(*func))
-    for func in funced:
-      function_module_relationship.append([func, module])
-    modulevariables.append(funced)
-  
-  allvariables.append(modulevariables)
-  
-  functions = []
-  readables = []
-  for modulefuncs in allvariables:
-    modulefunctions = modulefuncs[0]
-    modulereadables = modulefuncs[1]
-    for i in modulefunctions:
-      functions.append(i)
-    for i in modulereadables:
-      readables.append(i)
-  
-
-  chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
-
-  if inbuiltbackgroundlistener == InputMode.TEXT_BOX:
-    voicebox.startTextboxListener()
-  elif inbuiltbackgroundlistener == InputMode.VOICE:
-    startInbuiltVoiceListener(hotkey = speechHotkey)
-
-  return App(chosenchatbot, function_module_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync)
-
 
 def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, runningmode = RunningMode.SYNC, speechHotkey = "alt+j"):
   if type(scope) == str:
@@ -334,7 +430,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     elif inbuiltbackgroundlistener == InputMode.VOICE:
       startInbuiltVoiceListener(hotkey = speechHotkey)
 
-    runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=runningmode)
+    #runProcessMainloop(chosenchatbot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=runningmode)
   
   elif runningmode == RunningMode.SYNC:
     function_module_relationship = []
@@ -392,9 +488,7 @@ def init_main(scope: Union[str, List[str]] = "/", info = None, openai_key = None
     elif inbuiltbackgroundlistener == InputMode.VOICE:
       startInbuiltVoiceListener(hotkey = speechHotkey)
 
-    runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=runningmode)
-    
-
+    #runProcessMainloop(chosenchatbot, function_module_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=runningmode)
 
   
 def makeHidden(path):
@@ -431,15 +525,6 @@ def streamOutput():
 def awaitQueryFinish():
   pass
 
-def runProcessMainloop(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode=RunningMode.SYNC):
-  global startWaitingTime
-
-  startWaitingTime = time.time()
-  inbuiltbackgroundlistener = inbuiltbackgroundlistener
-  print("Ready")
-  while True:
-    runProcess(chosenchatbot, function_process_relationship, memory_retention_time, personality, inbuiltbackgroundlistener, outputfunc, outputasync, runningmode)
-
 def submitRequest(request: str):
   global requestQueue
   requestQueue.append(request)
@@ -475,167 +560,6 @@ def stopRecordingWithArg(arg):
   """Use this function to get out of the fact that on_release_key gives an argument"""
   stopRecording()
 
-def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, memory_retention_time, personality, inmode, outputfunc, outputasync, runningmode):
-  global startWaitingTime
-
-  qText = checkRequestQueue()
-  if qText == None:
-    return
-  timeTaken = time.time()-startWaitingTime
-  startWaitingTime = time.time()
-  if timeTaken > memory_retention_time:
-    print("Breaking conversation.")
-    chosenchatbot.breakConversation()
-  ans1 = createQuery(qText, chosenchatbot, function_process_relationship, runningmode)
-
-  personalityimplemented = False
-  try:
-      sig = inspect.signature(outputfunc)
-      if "personality" in sig.parameters:
-          personalityimplemented = True
-  except ValueError:
-      pass
-
-  if outputasync:
-    if personalityimplemented:
-      thread = threading.Thread(target=outputfunc, args=(ans1,), kwargs={"personality": personality})
-      thread.start()
-    else:
-      thread = threading.Thread(target=outputfunc, args=(ans1,))
-      thread.start()
-  else:
-    if personalityimplemented:
-      outputfunc(ans1, personality = personality)
-    else:
-      outputfunc(ans1)
-  #voicebox.say(ans1, mode = outputfunc, personality = personality)
-
-def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True, information_for_chaining = None):
-  thingtorun = chosenchatbot.query(string, chaining, information_for_chaining)
-  output = sendAndReceive(thingtorun, runningmode, chosenchatbot)
-  chosenchatbot.addQuestion(string)
-  chosenchatbot.addAnswer(thingtorun)
-  print(output)
-  print(thingtorun)
-  return
-  chosenchatbot.addQuestion(string)
-  print(resultset)
-
-  chained = (len(resultset) > 1)
-
-
-  allresults = []
-  informationtofollowthrough = []
-  explainedlist = [] # This is to stop duplication of costly function descriptions
-
-  for chosentype, result in resultset:
-    chosenchatbot.register_addHistory(f"My query: {string}")
-    if chosentype == "N":
-      chosenchatbot.register_addHistory(f"Your response: N {result}")
-      chosenchatbot.addHistory()
-      chosenchatbot.addAnswer(result)
-    
-    elif chosentype == "C":
-      print(informationtofollowthrough)
-      result = createQuery(result[1:].lstrip() + " Note: Just use the information you have been given.", chosenchatbot, function_process_relationship, runningmode, chaining = False, information_for_chaining = informationtofollowthrough)
-      print("fdsafsafasdfgasjdgfasjkdfghakj" + result)
-      result = None
-
-
-    else:
-      for function in function_process_relationship:
-        if function[0] == result[0]:
-          chosenprocess = function[1]
-      
-      thingtorun = result[1]
-      if "\n" in thingtorun:
-        thingtorun = thingtorun.split("\n")[0]
-
-      if thingtorun.split("(")[0] != result[0].function: # Attempted to suggest invalid function
-        if not(chained):
-          result = chosenchatbot.followThroughInformation("", string)
-        else:
-          result = None
-          informationtofollowthrough.append("")
-        chosenchatbot.register_addHistory(f"Your response: {result}")
-        chosenchatbot.addHistory()
-        if result:
-          chosenchatbot.addAnswer(result)
-      
-      else:
-
-        output = sendAndReceive(chosenprocess, thingtorun, runningmode, result[0])
-
-        if result[0].mode == "R":
-          explainedOutput = f"Your response: {result[0].mode}_{thingtorun} \n\nResult: {output if len(output) < 100 else 'Truncated as too long'}"
-          explainedOutputFull = f"Your response: {result[0].mode}_{thingtorun} \n\nResult: {output}"
-
-          if result[0].showFunction() not in explainedlist:
-            explainedOutputFull += f" Where {result[0].showFunction()}"
-            explainedlist.append(result[0].showFunction())
-
-
-          chosenchatbot.register_addHistory(explainedOutput)
-          if not(chained):
-            textResult = chosenchatbot.followThroughInformation(explainedOutputFull, string)
-          else:
-            textResult = None
-            informationtofollowthrough.append(explainedOutputFull)
-          chosenchatbot.register_addHistory(f"You: {textResult}")
-          chosenchatbot.addHistory()
-
-          result = textResult
-
-          if result:
-            chosenchatbot.addAnswer(result)
-
-        elif result[0].mode == "F":
-          explainedOutput = f"Your response: {result[0].mode}_{thingtorun} \n\nResult of running operation: {output if len(output) < 100 else 'Truncated as too long'}"
-          explainedOutputFull = f"Your response: {result[0].mode}_{thingtorun} \n\nResult of running operation: {output}"
-
-          if result[0].showFunction() not in explainedlist:
-            explainedOutputFull += f" Where {result[0].showFunction()}"
-            explainedlist.append(result[0].showFunction())
-
-          chosenchatbot.register_addHistory(explainedOutput)
-          if not(chained):
-            textResult = chosenchatbot.followThroughInformation(explainedOutputFull, string)
-          else:
-            textResult = None
-            informationtofollowthrough.append(explainedOutputFull)
-          chosenchatbot.register_addHistory(f"You: {textResult}")
-          chosenchatbot.addHistory()
-
-          result = textResult
-
-          if result:
-            chosenchatbot.addAnswer(result)
-    
-    if result != None:
-      allresults.append(result)
-  
-  if chained:
-    allresults.append(chosenchatbot.followThroughInformation("\n\n".join(informationtofollowthrough), string))
-  
-  return "\n".join(allresults)
-  #print(informationtofollowthrough)
-
-    
-
-
-def sendAndReceive(thingtorun, runningmode, chatbot):
-  if runningmode == RunningMode.SYNC:
-    try:
-      result = runCode(thingtorun, chatbot)
-      if result == None:
-        result = "Success!"
-      else:
-        result = str(result)
-    except Exception as e:
-      result = "Operation failed: " + str(e)
-    output = result
-  return output
-
 def runnableHiddenDecorator(func):
 
   @functools.wraps(func)
@@ -651,34 +575,6 @@ def readableHiddenDecorator(func):
     return func(*args, **kwargs)
   
   return wrapper
-
-def C_describe(dataToDescribe, method):
-  pass
-
-def C_say(string, variablestoadd = []):
-  pass
-
-def C_interpret(question, arguments, description, returns):
-  pass
-
-def C_choose(list_or_dict, prompt):
-  pass
-
-def runCode(thingtorun, chatbot: chatbot.ChatBot):
-  readables = chatbot.readables
-  functions = chatbot.functions
-
-  globalsforrunning = {"C_describe": C_describe, "C_say": C_say, "C_interpret": C_interpret}
-
-  for funcset, functype in [(readables, "R"), (functions, "F")]:
-    for func in funcset:
-      globalsforrunning[functype + "_" + func.function] = func.truefunction
-  
-  detector = codechecker.DangerousCodeDetector()
-  safe = detector.check(thingtorun)
-  if not(safe[0]):
-    raise JarvisBecameEvilError(safe[1])
-  exec(thingtorun, globalsforrunning)
 
 def listenForRunCommand():
   global opqueue

@@ -96,10 +96,10 @@ def toggle_pause():
   else:
     unpause_video()
 
-def update():
+def update(app: Jarvis.JarvisApp):
   global frame
   global ret
-  Jarvis.update_app(app)
+  app.update()
   if video is not None and not paused:
     ret, frame = video.read()
     if not ret:
@@ -177,7 +177,7 @@ stop = True
 
 Jarvis.initiateVoiceListener()
 
-app = Jarvis.init_app(
+app = Jarvis.JarvisApp(
   appinfo = "This app is a video-player.",
   personality = personalities.NONE, 
   openai_key = None,
@@ -188,4 +188,4 @@ app = Jarvis.init_app(
 )
 
 while True:
-  update()
+  update(app)

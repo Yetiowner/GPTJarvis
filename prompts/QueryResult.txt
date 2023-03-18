@@ -6,7 +6,7 @@ Here is some information:
 What is time in london? 
 ---------------------------system,example_assistant
 time = R_getTime("London")
-C_say(f"The time in london is {}", variablestoadd = [time])
+C_say("The time in london is {}", variablestoadd = [time])
 ---------------------------system,example_user
 Hello.
 ---------------------------system,example_assistant
@@ -16,14 +16,14 @@ How old will I be in 5 years?
 ---------------------------system,example_assistant
 age = R_getuserAge()
 newage = age+5
-C_say(f"Your age in 5 years will be {}", variablestoadd = [newage])
+C_say("Your age in 5 years will be {}", variablestoadd = [newage])
 ---------------------------system,example_user
 Is it currently warmer in detroit or in madagascar?
 ---------------------------system,example_assistant
 detroit = R_getWeather(42.3314, 83.0458)
 madagascar = R_getWeather(18.7699, 46.8691)
 better_weather = C_interpret("Which is warmer?", arguments=[detroit, madagascar], description = "First value: temperature in detroit, second value: temperature in madagascar.", returns = "A string of which place is warmer")
-C_say(f"The better weather is at {}", variablestoadd = [better_weather])
+C_say("The better weather is at {}", variablestoadd = [better_weather])
 ---------------------------system,example_user
 Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
 ---------------------------system,example_assistant
@@ -43,7 +43,7 @@ You: Ho
 Me: Get the time zone at the latitude and longitude of the number of questions I have asked.
 ---------------------------system,example_assistant
 timezone = R_getTimeZone(2, 2)
-C_say(f"The time-zone at these coordinates is {}", variablestoadd = [timezone])
+C_say("The time-zone at these coordinates is {}", variablestoadd = [timezone])
 ---------------------------system,example_user
 accessors: R_getSalary()
 Function that returns the user's salary in dollars
@@ -53,7 +53,7 @@ Function that converts a currency of currencyname of the amount "amount" into th
 Me: What is my salary in bitcoin?
 ---------------------------system,example_assistant
 btc_amount = R_convCurrency("$", R_getSalary(), "BTC")
-C_say(f"Your currency in bitcoin is {}", variablestoadd = [btc_amount])
+C_say("Your currency in bitcoin is {}", variablestoadd = [btc_amount])
 ---------------------------system,example_user
 accessors: R_foo()
 Function that returns a list of prime integers
@@ -65,15 +65,15 @@ Me: Pick a random number. Is it prime?
 primes = R_foo()
 num = R_randomNumber(0, 10)
 if num in primes:
-    C_say(f"The number {} is prime!", variablestoadd = [num])
+    C_say("The number {} is prime!", variablestoadd = [num])
 else:
-    C_say(f"The number {} is not prime!", variablestoadd = [num])
+    C_say("The number {} is not prime!", variablestoadd = [num])
 ---------------------------system,example_user
 My name: John Doe
 
 Me: What is my name?
 ---------------------------system,example_assistant
-C_say(f"Your name is John Doe")
+C_say("Your name is John Doe")
 ---------------------------system,example_user
 Accessors: R_google(string) returns a string of the output
 Me: Which Beatle was born latest?
@@ -87,7 +87,7 @@ for beatle in birthYears:
         youngestDate = birthYears[beatle]
         youngest = beatle
 
-C_say(f"The youngest beatle is {} who was born in {}", variablestoadd = [youngest, youngestDate])
+C_say("The youngest beatle is {} who was born in {}", variablestoadd = [youngest, youngestDate])
 ---------------------------system,example_user
 Accessors: R_square(integer)
 Me: square the integers from 1 to 10
@@ -96,7 +96,7 @@ out = []
 for i in range(1, 10):
     out.append(R_square(i))
 description = C_describe(out, method = "Describe each individual item. E.g. 'the first number is one, etc'")
-C_say(f"I have successfully squared each number from 1 to 10. Result: {}", variablestoadd = [description])
+C_say("I have successfully squared each number from 1 to 10. Result: {}", variablestoadd = [description])
 ---------------------------system,example_user
 Functions: F_foo(), F_bar()
 Me: run foo then wait for 5 seconds then run bar
@@ -110,26 +110,26 @@ Accessors: R_getListOfPupils() returns a table of school pupils with each record
 Me: How old is Sam?
 ---------------------------system,example_assistant
 pupils = R_getListOfPupils() # Note: DO NOT itterate through the list of pupils and check `if "Sam" in name`
-recordindex = C_choose(pupils, prompt = "Record refering to Sam")
+recordindex = C_choose(pupils, prompt = "Sam")
 record = pupils[recordindex]
 age = record[1]
-C_say(f"Sam is {} years old.", variablestoadd = [age])
+C_say("Sam is {} years old.", variablestoadd = [age])
 ---------------------------system,example_user
 Accessors: R_getDictionary() returns a dictionary of words with their meaning
 Me: What does "cow" mean?
 ---------------------------system,example_assistant
 worddict = R_getDictionary()
-dictkey = C_choose(worddict, prompt = "The word 'cow'")
+dictkey = C_choose(worddict, prompt = "cow")
 meaning = worddict[dictkey]
-C_say(f"The meaning of 'cow' is {}", variablestoadd = [meaning])
+C_say("The meaning of 'cow' is {}", variablestoadd = [meaning])
 ---------------------------system,example_user
 Accessors: R_getReviews() returns a list of strings of product reviews
 Me: Which review was posted the most recently?
 ---------------------------system,example_assistant
 reviews = R_getReviews()
-index = C_choose(reviews, prompt = "Which one was posted the most recently?")
+index = C_choose(reviews, prompt = "Most recently posted")
 review = reviews[index]
-C_say(f"The review posted the most recently is {}", variablestoadd = [review])
+C_say("The review posted the most recently is {}", variablestoadd = [review])
 ---------------------------user
 Here is a list of accessors: {accessors}.
 
@@ -148,9 +148,6 @@ You can use python syntax including if statements and for loops if you wish to b
 Fill accessors and functions with precicely the specified number of arguments. Use Python syntax.
 
 I am about to give you a request. Respond precisely in the manner I have told you to.
-
-Information to use:
-{information_for_chaining}
 
 The conversation:
 {q_and_a_history}

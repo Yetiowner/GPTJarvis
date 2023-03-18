@@ -127,10 +127,10 @@ class ChatBot():
         #out += self.getDataFromLink("https://api.ipify.org/?format=json", APIIPFinder, "What is my IP address?")
         return out
     
-    def query(self, text, chaining = True, information_for_chaining = None):
+    def query(self, text):
         print("----------------------------")
 
-        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text, chaining, information_for_chaining)
+        textToQuery, readnumbers, funcnumbers = self.generateSetupText(self.embeddedread, self.embeddedfunction, text)
         self.display(textToQuery)
 
         #print(textToQuery)
@@ -141,7 +141,7 @@ class ChatBot():
         model=MODEL,
         messages=textToQuery,
         temperature=self.temperature,
-        max_tokens=2048,
+        max_tokens=512,
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0
@@ -246,7 +246,7 @@ class ChatBot():
         model=MODEL,
         messages=analysis,
         temperature=self.temperature,
-        max_tokens=2048,
+        max_tokens=512,
         top_p=1.0,
         frequency_penalty=0.0,
         presence_penalty=0.0
@@ -287,7 +287,7 @@ class ChatBot():
         df["priority"] = [i.priority for i in self.functions]
         df.to_csv(FILEPATH+'embedded_functions.csv', index=False)
 
-    def generateSetupText(self, df, df1, prompt, chaining, information_for_chaining):
+    def generateSetupText(self, df, df1, prompt):
         embedding = get_embedding(prompt, model='text-embedding-ada-002')
 
         df['similarities'] = df.embedding.apply(lambda x: cosine_similarity(x, embedding))
@@ -323,19 +323,9 @@ class ChatBot():
         funcs = "\n".join(funcs)
 
         text = loadPrompt("QueryResult.txt")
-        if not chaining: # Remove chaining prompt
-            newtext = []
-            for i in range(len(text)):
-                if "\nC " not in text[i]["content"]:
-                    newtext.append(text[i])
-            text = newtext
-            newend = []
-            for line in text[-1]["content"].split("\n"):
-                if not(line.startswith("<chain>")):
-                    newend.append(line)
-            text[-1]["content"] = "\n".join(newend)
+
         text[0]["content"] = text[0]["content"].format(personality=self.personality.prompt, info=self.info)
-        text[-1]["content"] = text[-1]["content"].format(accessors=readables, functions=funcs, information_for_chaining = ("\n".join(information_for_chaining) if information_for_chaining else ""), q_and_a_history=self.q_and_a_history.rstrip(), prompt=prompt)
+        text[-1]["content"] = text[-1]["content"].format(accessors=readables, functions=funcs, q_and_a_history=self.q_and_a_history.rstrip(), prompt=prompt)
         text = self.injectHistory(text)
         return text, readablenums, funcnums
     
