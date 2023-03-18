@@ -6,7 +6,7 @@ Here is some information:
 What is time in london? 
 ---------------------------system,example_assistant
 time = R_getTime("London")
-C_say(f"The time in london is {time}")
+C_say(f"The time in london is {}", variablestoadd = [time])
 ---------------------------system,example_user
 Hello.
 ---------------------------system,example_assistant
@@ -16,14 +16,14 @@ How old will I be in 5 years?
 ---------------------------system,example_assistant
 age = R_getuserAge()
 newage = age+5
-C_say(f"Your age in 5 years will be {newage}")
+C_say(f"Your age in 5 years will be {}", variablestoadd = [newage])
 ---------------------------system,example_user
 Is it currently warmer in detroit or in madagascar?
 ---------------------------system,example_assistant
 detroit = R_getWeather(42.3314, 83.0458)
 madagascar = R_getWeather(18.7699, 46.8691)
 better_weather = C_interpret("Which is warmer?", arguments=[detroit, madagascar], description = "First value: temperature in detroit, second value: temperature in madagascar.", returns = "A string of which place is warmer")
-C_say(f"The better weather is at {better_weather}")
+C_say(f"The better weather is at {}", variablestoadd = [better_weather])
 ---------------------------system,example_user
 Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
 ---------------------------system,example_assistant
@@ -43,7 +43,7 @@ You: Ho
 Me: Get the time zone at the latitude and longitude of the number of questions I have asked.
 ---------------------------system,example_assistant
 timezone = R_getTimeZone(2, 2)
-C_say(f"The time-zone at these coordinates is {timezone}")
+C_say(f"The time-zone at these coordinates is {}", variablestoadd = [timezone])
 ---------------------------system,example_user
 accessors: R_getSalary()
 Function that returns the user's salary in dollars
@@ -53,7 +53,7 @@ Function that converts a currency of currencyname of the amount "amount" into th
 Me: What is my salary in bitcoin?
 ---------------------------system,example_assistant
 btc_amount = R_convCurrency("$", R_getSalary(), "BTC")
-C_say(f"Your currency in bitcoin is {btc_amount}")
+C_say(f"Your currency in bitcoin is {}", variablestoadd = [btc_amount])
 ---------------------------system,example_user
 accessors: R_foo()
 Function that returns a list of prime integers
@@ -65,9 +65,9 @@ Me: Pick a random number. Is it prime?
 primes = R_foo()
 num = R_randomNumber(0, 10)
 if num in primes:
-    C_say(f"The number {num} is prime!")
+    C_say(f"The number {} is prime!", variablestoadd = [num])
 else:
-    C_say(f"The number {num} is not prime!")
+    C_say(f"The number {} is not prime!", variablestoadd = [num])
 ---------------------------system,example_user
 My name: John Doe
 
@@ -87,7 +87,7 @@ for beatle in birthYears:
         youngestDate = birthYears[beatle]
         youngest = beatle
 
-C_say(f"The youngest beatle is {youngest} who was born in {youngestDate}")
+C_say(f"The youngest beatle is {} who was born in {}", variablestoadd = [youngest, youngestDate])
 ---------------------------system,example_user
 Accessors: R_square(integer)
 Me: square the integers from 1 to 10
@@ -96,16 +96,52 @@ out = []
 for i in range(1, 10):
     out.append(R_square(i))
 description = C_describe(out, method = "Describe each individual item. E.g. 'the first number is one, etc'")
-C_say(f"I have successfully squared each number from 1 to 10. Result: {description}")
+C_say(f"I have successfully squared each number from 1 to 10. Result: {}", variablestoadd = [description])
+---------------------------system,example_user
+Functions: F_foo(), F_bar()
+Me: run foo then wait for 5 seconds then run bar
+---------------------------system,example_assistant
+import time
+F_foo()
+time.sleep(5)
+F_bar()
+---------------------------system,example_user
+Accessors: R_getListOfPupils() returns a table of school pupils with each record being in the form of [name, age, class]
+Me: How old is Sam?
+---------------------------system,example_assistant
+pupils = R_getListOfPupils() # Note: DO NOT itterate through the list of pupils and check `if "Sam" in name`
+recordindex = C_choose(pupils, prompt = "Record refering to Sam")
+record = pupils[recordindex]
+age = record[1]
+C_say(f"Sam is {} years old.", variablestoadd = [age])
+---------------------------system,example_user
+Accessors: R_getDictionary() returns a dictionary of words with their meaning
+Me: What does "cow" mean?
+---------------------------system,example_assistant
+worddict = R_getDictionary()
+dictkey = C_choose(worddict, prompt = "The word 'cow'")
+meaning = worddict[dictkey]
+C_say(f"The meaning of 'cow' is {}", variablestoadd = [meaning])
+---------------------------system,example_user
+Accessors: R_getReviews() returns a list of strings of product reviews
+Me: Which review was posted the most recently?
+---------------------------system,example_assistant
+reviews = R_getReviews()
+index = C_choose(reviews, prompt = "Which one was posted the most recently?")
+review = reviews[index]
+C_say(f"The review posted the most recently is {}", variablestoadd = [review])
 ---------------------------user
 Here is a list of accessors: {accessors}.
 
 Here is a list of functions that can perform an action: {functions}
 
 Write python code to answer the question using the format given above. Answer questions using information from previous results.
-If you need to say something, use the C_say(string) function.
+If you need to say something, use the C_say(string, variablestoadd = []) function. The string is said, and if it contains a curly bracket it should be formatted using the variablestoadd argument which should be filled in with variables in order
 If you have values in a form that cannot be used in a calculation, and need to extract information from it, e.g. an integer from a string, or a boolean from a string, use the function C_interpret(question, arguments, description, returns), where question is the thing query to interpret, e.g. "is the sentiment positive or negative", arguments is a list of inputs that need to be interpretted, description describes the arguments, and returns describes the data-type to return.
 If you have values in a form that won't be easy to C_say, then use C_describe(data, method), which returns a string describing the datatype, in the form described by method, e.g. "Describe the items one by one"
+If you have a list or dictionary of values and want to find the closest one to your choice, use C_choose(list_or_dict, prompt), which returns the index or key that closest mathes the prompt from the list. The list should not be shortened before hand, so don't try to filter it before this step. This step is the only filtering step needed. The prompt should be a description of the object in the list to find. E.g. "Object which has a 3 in it". Use this if you are searching for something, do NOT try and apply a filter to the list before hand.
+
+If you have a list of items and want to pick the one I asked you about, use C_choose.
 
 You can use python syntax including if statements and for loops if you wish to branch/itterate.
 

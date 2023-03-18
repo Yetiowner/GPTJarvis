@@ -14,7 +14,8 @@ import GPTJarvis.src.personalities as personalities
 
 """C_describe(): describe a variable as a string
 C_say(): output a string
-C_interpret(): asks question about output and returns the answer in the method requested"""
+C_interpret(): asks question about output and returns the answer in the method requested
+C_choose(): Returns the index of an item in a list based on a query"""
 
 MODEL = "gpt-3.5-turbo"
 PERMANENTINFO = loadPrompt("PermanentInfo.txt", mode = "text")
@@ -232,7 +233,7 @@ class ChatBot():
         self.q_and_a_history += "Me: " + question + "\n"
     
     def addAnswer(self, answer):
-        self.q_and_a_history += "You: " + answer + "\n"
+        self.q_and_a_history += "You: " + answer + "\n\n"
     
     def commitToLTM(self, info, mode=None):
         #TODO

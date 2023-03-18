@@ -17,8 +17,7 @@ def release(event):
         paused = False
         stop = False
 
-@Jarvis.runnable
-def select_video():
+def select_video_GUI():
     global video, video_path, paused, stop, canvas, progress_bar
     
     if video_path is None:
@@ -33,7 +32,7 @@ def pause_video():
     paused = True
 
 @Jarvis.runnable
-def play_video():
+def unpause_video():
     global paused
     pause_button.config(text="⏸️")
     paused = False
@@ -80,13 +79,22 @@ def get_current_position_in_video():
   progress = current_frame / total_frames
   return get_length_of_video() * progress
 
+@Jarvis.readable
+def getListOfVideos():
+  """Returns a list of video names"""
+  pass
+
+@Jarvis.runnable
+def selectSpecificVideoFromIndex(video_index):
+  pass
+
 @Jarvis.runnable
 def toggle_pause():
   global paused
   if not paused:
     pause_video()
   else:
-    play_video()
+    unpause_video()
 
 def update():
   global frame
@@ -94,6 +102,9 @@ def update():
   Jarvis.update_app(app)
   if video is not None and not paused:
     ret, frame = video.read()
+    if not ret:
+      root.update()
+      return
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h, w, _ = frame.shape
     if h > 400:
@@ -102,6 +113,7 @@ def update():
   if stop:
     root.update()
     return
+  
   if not ret:
     root.update()
     return
@@ -136,7 +148,7 @@ canvas = tk.Canvas(video_frame)
 canvas.pack()
 
 # Create control buttons
-play_button = tk.Button(root, text="Select video", command=select_video)
+play_button = tk.Button(root, text="Select video", command=select_video_GUI)
 play_button.pack(side=tk.LEFT, padx=10)
 
 pause_button = tk.Button(root, text="⏸️", command=toggle_pause)

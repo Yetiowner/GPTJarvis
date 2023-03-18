@@ -25,7 +25,6 @@ import keyboard
 
 #TODO: add long term memory
 #TODO: add true automation E.g. using @Jarvis.listener
-#TODO: add whisper audio integration
 
 functionlist = []
 opqueue = []
@@ -514,9 +513,8 @@ def runProcess(chosenchatbot: chatbot.ChatBot, function_process_relationship, me
 def createQuery(string, chosenchatbot: chatbot.ChatBot, function_process_relationship, runningmode, chaining = True, information_for_chaining = None):
   thingtorun = chosenchatbot.query(string, chaining, information_for_chaining)
   output = sendAndReceive(thingtorun, runningmode, chosenchatbot)
-  chosenchatbot.register_addHistory(f"My query: {string}")
-  chosenchatbot.register_addHistory(f"Your response: {output}")
-  chosenchatbot.addHistory()
+  chosenchatbot.addQuestion(string)
+  chosenchatbot.addAnswer(thingtorun)
   print(output)
   print(thingtorun)
   return
@@ -657,10 +655,13 @@ def readableHiddenDecorator(func):
 def C_describe(dataToDescribe, method):
   pass
 
-def C_say(string):
+def C_say(string, variablestoadd = []):
   pass
 
 def C_interpret(question, arguments, description, returns):
+  pass
+
+def C_choose(list_or_dict, prompt):
   pass
 
 def runCode(thingtorun, chatbot: chatbot.ChatBot):
@@ -703,7 +704,7 @@ def getFullDoc(my_function):
   try:
     function_signature = inspect.signature(my_function)
     function_definition = f"{my_function.__name__}{function_signature}"
-    docstring_with_definition = f"{function_definition}\n{my_function.__doc__}"
+    docstring_with_definition = f"{function_definition}\n{my_function.__doc__ if my_function.__doc__ else ''}"
     return docstring_with_definition
   except:
     return my_function.__doc__
