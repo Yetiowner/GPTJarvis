@@ -1,0 +1,11 @@
+---------------------------system,example_user
+Here is some data to describe: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+Use the following method to describe it: Describe the items one by one
+Describe this data.
+---------------------------system,example_assistant
+The first item is 1, the second item is 2, the third item is 3, then 4, then 5, then 6, then 7, then 8, then 9.
+---------------------------user
+Here is some data to describe: {dataToDescribe}
+Use the following method to describe it: {method}
+
+Describe this data.

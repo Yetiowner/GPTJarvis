@@ -55,20 +55,6 @@ Me: What is my salary in bitcoin?
 btc_amount = R_convCurrency("$", R_getSalary(), "BTC")
 C_say("Your currency in bitcoin is {}", variablestoadd = [btc_amount])
 ---------------------------system,example_user
-accessors: R_foo()
-Function that returns a list of prime integers
-R_randomNumber(start, end)
-Function that returns a random number between the start and end.
-
-Me: Pick a random number. Is it prime?
----------------------------system,example_assistant
-primes = R_foo()
-num = R_randomNumber(0, 10)
-if num in primes:
-    C_say("The number {} is prime!", variablestoadd = [num])
-else:
-    C_say("The number {} is not prime!", variablestoadd = [num])
----------------------------system,example_user
 My name: John Doe
 
 Me: What is my name?
@@ -106,11 +92,17 @@ F_foo()
 time.sleep(5)
 F_bar()
 ---------------------------system,example_user
+Me: Pick a random number between 1 and 10
+---------------------------system,example_assistant
+import random
+num = random.randint(1, 10)
+C_say("I chose {}", variablestoadd = [num])
+---------------------------system,example_user
 Accessors: R_getListOfPupils() returns a table of school pupils with each record being in the form of [name, age, class]
 Me: How old is Sam?
 ---------------------------system,example_assistant
 pupils = R_getListOfPupils() # Note: DO NOT itterate through the list of pupils and check `if "Sam" in name`
-recordindex = C_choose(pupils, prompt = "Sam")
+recordindex = C_choose(pupils, prompt = "Sam", list_description = "A list of records with each record in the form of [name, age, class]")
 record = pupils[recordindex]
 age = record[1]
 C_say("Sam is {} years old.", variablestoadd = [age])
@@ -119,7 +111,7 @@ Accessors: R_getDictionary() returns a dictionary of words with their meaning
 Me: What does "cow" mean?
 ---------------------------system,example_assistant
 worddict = R_getDictionary()
-dictkey = C_choose(worddict, prompt = "cow")
+dictkey = C_choose(worddict, prompt = "cow", list_description = "A dictionary of words and their meanings")
 meaning = worddict[dictkey]
 C_say("The meaning of 'cow' is {}", variablestoadd = [meaning])
 ---------------------------system,example_user
@@ -127,9 +119,19 @@ Accessors: R_getReviews() returns a list of strings of product reviews
 Me: Which review was posted the most recently?
 ---------------------------system,example_assistant
 reviews = R_getReviews()
-index = C_choose(reviews, prompt = "Most recently posted")
+index = C_choose(reviews, prompt = "Most recently posted", list_description = "A list of strings of product reviews")
 review = reviews[index]
 C_say("The review posted the most recently is {}", variablestoadd = [review])
+---------------------------system,example_user
+Accessors: R_getReviews() returns a list of strings of product reviews
+Me: Which reviews are positive?
+---------------------------system,example_assistant
+reviews = R_getReviews()
+indexes = C_choose(reviews, prompt = "Positive sentiment", list_description = "A list of strings of product reviews", multiple = True)
+positiveReviews = []
+for index in indexes:
+    positiveReviews.append(reviews[index])
+C_say("Here are some positive reviews: {}", variablestoadd = ["\n\n".join(positiveReviews)])
 ---------------------------user
 Here is a list of accessors: {accessors}.
 
@@ -139,15 +141,17 @@ Write python code to answer the question using the format given above. Answer qu
 If you need to say something, use the C_say(string, variablestoadd = []) function. The string is said, and if it contains a curly bracket it should be formatted using the variablestoadd argument which should be filled in with variables in order
 If you have values in a form that cannot be used in a calculation, and need to extract information from it, e.g. an integer from a string, or a boolean from a string, use the function C_interpret(question, arguments, description, returns), where question is the thing query to interpret, e.g. "is the sentiment positive or negative", arguments is a list of inputs that need to be interpretted, description describes the arguments, and returns describes the data-type to return.
 If you have values in a form that won't be easy to C_say, then use C_describe(data, method), which returns a string describing the datatype, in the form described by method, e.g. "Describe the items one by one"
-If you have a list or dictionary of values and want to find the closest one to your choice, use C_choose(list_or_dict, prompt), which returns the index or key that closest mathes the prompt from the list. The list should not be shortened before hand, so don't try to filter it before this step. This step is the only filtering step needed. The prompt should be a description of the object in the list to find. E.g. "Object which has a 3 in it". Use this if you are searching for something, do NOT try and apply a filter to the list before hand.
+If you have a list or dictionary of values and want to find the closest one to your choice, use C_choose(list_or_dict, prompt, list_description, multiple = False), which returns the index or key that closest mathes the prompt from the list. The list should not be shortened before hand, so don't try to filter it before this step. This step is the only filtering step needed. The prompt should be a description of the object in the list to find. E.g. "Object which has a 3 in it". The list_description should be descriptive of what the list is showing, e.g. a list of numbers. Use this if you are searching for something, do NOT try and apply a filter to the list before hand. The prompt should be something which you would send to yourself and is descriptive of what is required. If you want to choose multiple, set multiple = true
+
+If you want to say something, instead of just saying it, run C_say(), and say it through that. All your outputs should be valid python code.
 
 If you have a list of items and want to pick the one I asked you about, use C_choose.
 
 You can use python syntax including if statements and for loops if you wish to branch/itterate.
 
-Fill accessors and functions with precicely the specified number of arguments. Use Python syntax.
+Fill accessors and functions with precicely the specified number of arguments. Use Python syntax. If you need to import something, e.g. numpy or cv2, you must import it at the top of the code.
 
-I am about to give you a request. Respond precisely in the manner I have told you to.
+I am about to give you a request. Respond precisely in the manner I have told you to. Remember to import necessary modules.
 
 The conversation:
 {q_and_a_history}

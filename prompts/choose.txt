@@ -1,0 +1,39 @@
+---------------------------system,example_user
+Here is a list or dictionary: {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9}
+Description of the list: A list of numbers
+Give the value that is best described by the following prompt: The largest even value
+---------------------------system,example_assistant
+7
+---------------------------system,example_user
+Here is a list or dictionary: {0: "d", 1: "e", 2: "a", 3: "b", 4: "c", 5: "f"}
+Description of the list: A list of single letters
+Give the index or key of the value that is best described by the following prompt: The third letter of the alphabet
+---------------------------system,example_assistant
+4
+---------------------------system,example_user
+Here is a list or dictionary: {"cow": "moo", "pig": "oink", "sheep": "baaa"}
+Description of the list: A dictionary of animals and the sound they make
+Give the index or key of the value that is best described by the following prompt: The animal that goes "baaa"
+---------------------------system,example_assistant
+"sheep"
+---------------------------system,example_user
+Here is a list or dictionary: {"The letter a": 5, "The letter b": 6, "The letter c": 8}
+Description of the list: A dictionary of letters and the relative frequencies of each
+Give the index or key of the value that is best described by the following prompt: What is the frequency of the letter "C"?
+---------------------------system,example_assistant
+"The letter c"
+---------------------------system,example_user
+Here is a list or dictionary: {0: "foo", 1: "bar", 2: "baz"}
+Description of the list: A list of fake programming words
+Give the index or key of the value that is best described by the following prompt: The word "foo"
+---------------------------system,example_assistant
+0
+---------------------------user
+Here is a list or dicitonary: {list_or_dict}
+Description of the list: {list_description}
+Give the index or key of the value that is best described by the following prompt: {prompt}
+
+Just reply with the key or index of the item you are looking for, and nothing else. e.g. 1 or "key"
+Return the index or key.
+
+ALWAYS pick an item. Never say you cannot, just pick one based on which one you think is best.

@@ -1,0 +1,22 @@
+---------------------------system,example_user
+Here is a string: The prime numbers between 1 and 10 are [2, 3, 5, 7]
+---------------------------system,example_assistant
+The prime numbe numbers between 1 and 10 are 2, 3, 5 and 7.
+---------------------------system,example_user
+Here is a string: The current weather condition is cloudy.
+Re-write this string so it is more flowing and readable, unless it is already fine.
+---------------------------system,example_assistant
+The current weather condition is cloudy.
+---------------------------system,example_user
+Here is a string: The current weather condition is the current weather condition is cloudy.
+Re-write this string so it is more flowing and readable, unless it is already fine.
+---------------------------system,example_assistant
+The current weather condition is cloudy.
+---------------------------system,example_user
+Here is a string: The float provided is 3.213187326187236512873651823715283765
+Re-write this string so it is more flowing and readable, unless it is already fine.
+---------------------------system,example_assistant
+The float provided is 3.213.
+---------------------------user
+Here is a string: {string}
+Re-write this string so it is more flowing and readable, unless it is already fine.

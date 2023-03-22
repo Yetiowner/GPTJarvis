@@ -16,6 +16,7 @@ import GPTJarvis.src.chatbot as chatbot
 import GPTJarvis.src.personalities as personalities
 import GPTJarvis.src.config as config
 import GPTJarvis.src.codechecker as codechecker
+import GPTJarvis.src.customfunctions as customfunctions
 import ctypes
 import functools
 import importlib.util
@@ -184,49 +185,38 @@ class JarvisApp:
     if timeTaken > self.memory_retention_time:
       print("Breaking conversation.")
       self.chosenchatbot.breakConversation()
-    ans1 = self.createQuery(qText)
 
-    personalityimplemented = False
+    self.personalityimplemented = False
     try:
         sig = inspect.signature(self.outputfunc)
         if "personality" in sig.parameters:
-            personalityimplemented = True
+            self.personalityimplemented = True
     except ValueError:
         pass
+    
+    self.createQuery(qText)
 
-    if self.outputasync:
-      if personalityimplemented:
-        thread = threading.Thread(target=self.outputfunc, args=(ans1,), kwargs={"personality": self.personality})
-        thread.start()
-      else:
-        thread = threading.Thread(target=self.outputfunc, args=(ans1,))
-        thread.start()
-    else:
-      if personalityimplemented:
-        self.outputfunc(ans1, personality = self.personality)
-      else:
-        self.outputfunc(ans1)
     #voicebox.say(ans1, mode = outputfunc, personality = personality)
   
   def createQuery(self, string):
     thingtorun = self.chosenchatbot.query(string)
+    print(thingtorun)
     output = self.sendAndReceive(thingtorun, self.runningmode, self.chosenchatbot)
     self.chosenchatbot.addQuestion(string)
     self.chosenchatbot.addAnswer(thingtorun)
     print(output)
-    print(thingtorun)
 
   def C_describe(self, dataToDescribe, method):
-    pass
+    return customfunctions.C_describe(dataToDescribe, method)
 
   def C_say(self, string, variablestoadd = []):
-    pass
+    return customfunctions.C_say(string, self.outputasync, self.personalityimplemented, self.outputfunc, self.personality, variablestoadd)
 
   def C_interpret(self, question, arguments, description, returns):
-    pass
+    return customfunctions.C_interpret(question, arguments, description, returns)
 
-  def C_choose(self, list_or_dict, prompt):
-    pass
+  def C_choose(self, list_or_dict, prompt, list_description):
+    return customfunctions.C_choose(list_or_dict, prompt, list_description)
 
   def runCode(self, thingtorun, chatbot: chatbot.ChatBot):
     readables = chatbot.readables
@@ -242,6 +232,12 @@ class JarvisApp:
     safe = detector.check(thingtorun)
     if not(safe[0]):
       raise JarvisBecameEvilError(safe[1])
+
+    allowedModules = codechecker.TRUSTED_MODULES
+    for module in allowedModules:
+      if module in thingtorun:
+        thingtorun = f"import {module}\n" + thingtorun
+    
     exec(thingtorun, globalsforrunning)
   
   def sendAndReceive(self, thingtorun, runningmode, chatbot):

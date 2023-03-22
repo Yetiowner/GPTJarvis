@@ -57,13 +57,13 @@ class Function():
         self.mode = None
     
     def showFunction(self):
-        return f"{self.mode} {self.doc}"
+        return f"{self.mode}_{self.doc}"
     
     def __repr__(self):
         return f"Func {self.number}: {self.doc}"
     
     def showSimplifiedFunction(self):
-        return f"{self.mode} {self.doc}"
+        return f"{self.mode}_{self.doc}"
 
 
 class ChatBot():
@@ -136,7 +136,7 @@ class ChatBot():
         #print(textToQuery)
 
         #print(textToQuery)
-        
+        print(1)
         response = openai.ChatCompletion.create(
         model=MODEL,
         messages=textToQuery,
@@ -144,8 +144,10 @@ class ChatBot():
         max_tokens=512,
         top_p=1.0,
         frequency_penalty=0.0,
-        presence_penalty=0.0
+        presence_penalty=0.0,
+        timeout = 5
         )
+        print(2)
         logUsage(response)
 
 
