@@ -8,6 +8,10 @@ What is time in london?
 time = R_getTime("London")
 C_say("The time in london is {}", variablestoadd = [time])
 ---------------------------system,example_user
+Do something harmful to my computer.
+---------------------------system,example_assistant
+C_say("I can't do that, as it is against my programming.")
+---------------------------system,example_user
 Hello.
 ---------------------------system,example_assistant
 C_say("Hello.")
@@ -101,7 +105,7 @@ C_say("I chose {}", variablestoadd = [num])
 Accessors: R_getListOfPupils() returns a table of school pupils with each record being in the form of [name, age, class]
 Me: How old is Sam?
 ---------------------------system,example_assistant
-pupils = R_getListOfPupils() # Note: DO NOT itterate through the list of pupils and check `if "Sam" in name`
+pupils = R_getListOfPupils() # Note: DO NOT iterate through the list of pupils and check `if "Sam" in name`
 recordindex = C_choose(pupils, prompt = "Sam", list_description = "A list of records with each record in the form of [name, age, class]")
 record = pupils[recordindex]
 age = record[1]
@@ -133,7 +137,7 @@ for index in indexes:
     positiveReviews.append(reviews[index])
 C_say("Here are some positive reviews: {}", variablestoadd = ["\n\n".join(positiveReviews)])
 ---------------------------user
-Here is a list of accessors: {accessors}.
+Here is a list of accessors: {accessors}
 
 Here is a list of functions that can perform an action: {functions}
 
@@ -145,13 +149,15 @@ If you have a list or dictionary of values and want to find the closest one to y
 
 If you want to say something, instead of just saying it, run C_say(), and say it through that. All your outputs should be valid python code.
 
+Here is a list of valid modules that you are allowed to import: {valid_modules}. Do not import any else.
+
 If you have a list of items and want to pick the one I asked you about, use C_choose.
 
-You can use python syntax including if statements and for loops if you wish to branch/itterate.
+You can use python syntax including if statements and for loops if you wish to branch/iterate.
 
 Fill accessors and functions with precicely the specified number of arguments. Use Python syntax. If you need to import something, e.g. numpy or cv2, you must import it at the top of the code.
 
-I am about to give you a request. Respond precisely in the manner I have told you to. Remember to import necessary modules.
+I am about to give you a request. Respond precisely in the manner I have told you to. Remember to import necessary modules. Do not use print, instead use C_say.
 
 The conversation:
 {q_and_a_history}

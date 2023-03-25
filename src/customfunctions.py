@@ -75,7 +75,7 @@ def C_say(string, outputasync, personalityimplemented, outputfunc, personality, 
 def C_interpret(question, arguments, description, returns):
   pass
 
-def C_choose(list_or_dict, chooseprompt, list_description):
+def C_choose(list_or_dict, chooseprompt, list_description, multiple):
   list_or_dict = list2dict(list_or_dict)
   print(list_or_dict)
   prompt = copy.deepcopy(choosePrompt)

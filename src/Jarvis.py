@@ -17,12 +17,15 @@ import GPTJarvis.src.personalities as personalities
 import GPTJarvis.src.config as config
 import GPTJarvis.src.codechecker as codechecker
 import GPTJarvis.src.customfunctions as customfunctions
+import GPTJarvis.src.utils as utils
+import GPTJarvis.src.findError as findError
 import ctypes
 import functools
 import importlib.util
 import sys
 from enum import Enum
 import keyboard
+import traceback
 
 #TODO: add long term memory
 #TODO: add true automation E.g. using @Jarvis.listener
@@ -68,7 +71,7 @@ class RunningMode(Enum):
   ASYNC = "async"
 
 class JarvisApp:
-  def __init__(self, appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 10, minSimilarity = 0.65, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j"):
+  def __init__(self, appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 20, minSimilarity = 0.5, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j", maxretries = 1):
     
     self.appinfo = appinfo
     self.includePersonalInfo = includePersonalInfo
@@ -94,6 +97,7 @@ class JarvisApp:
     self.outputfunc = outputfunc
     self.outputasync = outputasync
     self.runningmode = RunningMode.SYNC
+    self.maxretries = maxretries
   
   def getFunctions(self):
     self.function_module_relationship = []
@@ -201,10 +205,32 @@ class JarvisApp:
   def createQuery(self, string):
     thingtorun = self.chosenchatbot.query(string)
     print(thingtorun)
-    output = self.sendAndReceive(thingtorun, self.runningmode, self.chosenchatbot)
-    self.chosenchatbot.addQuestion(string)
-    self.chosenchatbot.addAnswer(thingtorun)
-    print(output)
+    failed = True
+    attempts = 0
+    while attempts <= self.maxretries and failed:
+      try:
+        self.sendAndReceive(thingtorun, self.runningmode, self.chosenchatbot)
+        failed = False
+      except Exception as e:
+        if isinstance(e, JarvisBecameEvilError):
+          raise
+        error = findError.calcException(e, thingtorun)
+        linefailed = error[0]
+        tb_str = error[1]
+        linefailederror = error[2]
+        failed = True
+      self.chosenchatbot.addQuestion(string)
+      self.chosenchatbot.addAnswer(thingtorun)
+      if failed:
+        answer = self.chosenchatbot.q_and_a_history[-1]
+        answer = answer.split("\n")
+        answer[linefailed-1] += f" # <----- {linefailederror}"
+        answer = "\n".join(answer)
+        self.chosenchatbot.q_and_a_history[-1] = answer
+        self.chosenchatbot.addAnswer(utils.loadPrompt("failure.txt", mode = "text").format(error=tb_str))
+        thingtorun = self.chosenchatbot.query(string)
+        print(thingtorun)
+      attempts += 1
 
   def C_describe(self, dataToDescribe, method):
     return customfunctions.C_describe(dataToDescribe, method)
@@ -215,8 +241,8 @@ class JarvisApp:
   def C_interpret(self, question, arguments, description, returns):
     return customfunctions.C_interpret(question, arguments, description, returns)
 
-  def C_choose(self, list_or_dict, prompt, list_description):
-    return customfunctions.C_choose(list_or_dict, prompt, list_description)
+  def C_choose(self, list_or_dict, prompt, list_description, multiple = False):
+    return customfunctions.C_choose(list_or_dict, prompt, list_description, multiple)
 
   def runCode(self, thingtorun, chatbot: chatbot.ChatBot):
     readables = chatbot.readables
@@ -231,27 +257,15 @@ class JarvisApp:
     detector = codechecker.DangerousCodeDetector()
     safe = detector.check(thingtorun)
     if not(safe[0]):
-      raise JarvisBecameEvilError(safe[1])
-
-    allowedModules = codechecker.TRUSTED_MODULES
-    for module in allowedModules:
-      if module in thingtorun:
-        thingtorun = f"import {module}\n" + thingtorun
+      raise JarvisBecameEvilError(f"{safe[1]} in code '{thingtorun}'")
     
     exec(thingtorun, globalsforrunning)
   
   def sendAndReceive(self, thingtorun, runningmode, chatbot):
     if runningmode == RunningMode.SYNC:
-      try:
-        result = self.runCode(thingtorun, chatbot)
-        if result == None:
-          result = "Success!"
-        else:
-          result = str(result)
-      except Exception as e:
-        result = "Operation failed: " + str(e)
-      output = result
-    return output
+      result = self.runCode(thingtorun, chatbot)
+    
+    return result
 
 def priority(func):
   @functools.wraps(func)

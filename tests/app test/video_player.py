@@ -20,7 +20,7 @@ def get_videos():
     # resize the thumbnail to a reasonable size
     color_coverted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     thumbnail = Image.fromarray(color_coverted)
-    thumbnail = thumbnail.resize((60, 45) )
+    thumbnail = thumbnail.resize((60, 45))
 
     viddat["thumbnail"] = thumbnail
     viddat["videoCapture"] = vidcap

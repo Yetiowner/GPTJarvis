@@ -11,6 +11,7 @@ import numpy as np
 import json
 from GPTJarvis.src.utils import loadPrompt
 import GPTJarvis.src.personalities as personalities
+import GPTJarvis.src.codechecker as codechecker
 
 """C_describe(): describe a variable as a string
 C_say(): output a string
@@ -82,7 +83,7 @@ class ChatBot():
         self.tempinfo = ""
         self.requesthistory = []
         self.temphistory = ""
-        self.q_and_a_history = ""
+        self.q_and_a_history = []
         self.maxhistorylength = maxhistorylength
         self.sampleCount = sampleCount
         self.minSimilarity = minSimilarity
@@ -232,10 +233,10 @@ class ChatBot():
         self.tempinfo = ""
     
     def addQuestion(self, question):
-        self.q_and_a_history += "Me: " + question + "\n"
+        self.q_and_a_history.append("Me: " + question + "\n")
     
     def addAnswer(self, answer):
-        self.q_and_a_history += "You: " + answer + "\n\n"
+        self.q_and_a_history.append("You: " + answer + "\n\n")
     
     def commitToLTM(self, info, mode=None):
         #TODO
@@ -327,7 +328,7 @@ class ChatBot():
         text = loadPrompt("QueryResult.txt")
 
         text[0]["content"] = text[0]["content"].format(personality=self.personality.prompt, info=self.info)
-        text[-1]["content"] = text[-1]["content"].format(accessors=readables, functions=funcs, q_and_a_history=self.q_and_a_history.rstrip(), prompt=prompt)
+        text[-1]["content"] = text[-1]["content"].format(accessors=readables, functions=funcs, valid_modules = codechecker.TRUSTED_MODULES, q_and_a_history="\n".join(self.q_and_a_history), prompt=prompt)
         text = self.injectHistory(text)
         return text, readablenums, funcnums
     
@@ -410,7 +411,7 @@ class ChatBot():
     def generateAnalysisText(self, data, question):
         text = loadPrompt("Analysis.txt")
         text[0]["content"] = text[0]["content"].format(personality=self.personality.prompt, info=self.info)
-        text[-1]["content"] = text[-1]["content"].format(data=data, q_and_a_history=self.q_and_a_history, query=question)
+        text[-1]["content"] = text[-1]["content"].format(data=data, q_and_a_history="\n".join(self.q_and_a_history), query=question)
         text = self.injectHistory(text)
         return text
     
