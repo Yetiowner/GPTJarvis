@@ -14,7 +14,10 @@ def frames_to_tb(frames, code):
         function = frame.tb_frame.f_code.co_name
         line = linecache.getline(filename, lineno).strip()
         if line == "":
-            line = code.split("\n")[lineno-1]
+            try:
+                line = code.split("\n")[lineno-1]
+            except:
+                pass
         tb.append((filename, lineno, function, line))
     return tuple(tb)
 
@@ -42,6 +45,7 @@ def calcException(e, code):
         tb = tb.tb_next
 
     if isinstance(e, SyntaxError):
+        # TODO fix syntax errors that are embedded down the callstack, as this only works for ones in the calling block.
         tb_tuple = []
         # Handle syntax errors
         filename = "<string>"

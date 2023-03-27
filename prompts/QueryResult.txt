@@ -22,13 +22,6 @@ age = R_getuserAge()
 newage = age+5
 C_say("Your age in 5 years will be {}", variablestoadd = [newage])
 ---------------------------system,example_user
-Is it currently warmer in detroit or in madagascar?
----------------------------system,example_assistant
-detroit = R_getWeather(42.3314, 83.0458)
-madagascar = R_getWeather(18.7699, 46.8691)
-better_weather = C_interpret("Which is warmer?", arguments=[detroit, madagascar], description = "First value: temperature in detroit, second value: temperature in madagascar.", returns = "A string of which place is warmer")
-C_say("The better weather is at {}", variablestoadd = [better_weather])
----------------------------system,example_user
 Save and quit the application. Say "foo, bar, baz". How many tabs do I have open right now? If the number is larger than 8, reopen it.
 ---------------------------system,example_assistant
 F_saveProgram()
@@ -67,26 +60,6 @@ C_say("Your name is John Doe")
 ---------------------------system,example_user
 Accessors: R_google(string) returns a string of the output
 Me: Which Beatle was born latest?
----------------------------system,example_assistant
-googlesearch = R_google("Beatles birth dates")
-birthYears = C_interpret("What are the ages of the beatles?", [googlesearch], description = "First value: the output string from googling the ages of the beatles", returns = "A dictionary of the name of the beatle followed by the birth year, e.g. {'Ringo Starr': 2022}")
-youngest = None
-youngestDate = -1
-for beatle in birthYears:
-    if birthYears[beatle] > youngestDate:
-        youngestDate = birthYears[beatle]
-        youngest = beatle
-
-C_say("The youngest beatle is {} who was born in {}", variablestoadd = [youngest, youngestDate])
----------------------------system,example_user
-Accessors: R_square(integer)
-Me: square the integers from 1 to 10
----------------------------system,example_assistant
-out = []
-for i in range(1, 10):
-    out.append(R_square(i))
-description = C_describe(out, method = "Describe each individual item. E.g. 'the first number is one, etc'")
-C_say("I have successfully squared each number from 1 to 10. Result: {}", variablestoadd = [description])
 ---------------------------system,example_user
 Functions: F_foo(), F_bar()
 Me: run foo then wait for 5 seconds then run bar
@@ -143,9 +116,9 @@ Here is a list of functions that can perform an action: {functions}
 
 Write python code to answer the question using the format given above. Answer questions using information from previous results.
 If you need to say something, use the C_say(string, variablestoadd = []) function. The string is said, and if it contains a curly bracket it should be formatted using the variablestoadd argument which should be filled in with variables in order
-If you have values in a form that cannot be used in a calculation, and need to extract information from it, e.g. an integer from a string, or a boolean from a string, use the function C_interpret(question, arguments, description, returns), where question is the thing query to interpret, e.g. "is the sentiment positive or negative", arguments is a list of inputs that need to be interpretted, description describes the arguments, and returns describes the data-type to return.
-If you have values in a form that won't be easy to C_say, then use C_describe(data, method), which returns a string describing the datatype, in the form described by method, e.g. "Describe the items one by one"
 If you have a list or dictionary of values and want to find the closest one to your choice, use C_choose(list_or_dict, prompt, list_description, multiple = False), which returns the index or key that closest mathes the prompt from the list. The list should not be shortened before hand, so don't try to filter it before this step. This step is the only filtering step needed. The prompt should be a description of the object in the list to find. E.g. "Object which has a 3 in it". The list_description should be descriptive of what the list is showing, e.g. a list of numbers. Use this if you are searching for something, do NOT try and apply a filter to the list before hand. The prompt should be something which you would send to yourself and is descriptive of what is required. If you want to choose multiple, set multiple = true
+Please note that that C_choose returns the index or key of the item, so if you pass in a list, you will get an integer returned, or if you pass in a dictionary, you will get the key returned.
+You can pass in either a list or a dictionary.
 
 If you want to say something, instead of just saying it, run C_say(), and say it through that. All your outputs should be valid python code.
 

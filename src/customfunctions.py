@@ -31,7 +31,7 @@ def getResponse(prompt):
   model=MODEL,
   messages=prompt,
   temperature=0.5,
-  max_tokens=512,
+  max_tokens=128,
   top_p=1.0,
   frequency_penalty=0.0,
   presence_penalty=0.0
@@ -82,5 +82,12 @@ def C_choose(list_or_dict, chooseprompt, list_description, multiple):
   prompt[-1]["content"] = prompt[-1]["content"].format(list_or_dict=list_or_dict, prompt=chooseprompt, list_description=list_description)
   response = getResponse(prompt)
   print(response, "foo")
-  response = ast.literal_eval(response)
+  failed = True
+  try:
+    response = ast.literal_eval(response)
+    failed = False
+  except:
+    pass
+  if failed:
+    raise KeyError(response)
   return response

@@ -1,0 +1,1 @@
+It looks like the error was a syntax error. If this occured in the main code, then make sure you are using C_say to say any error messages, or to say anything you can't do, instead of just saying it, e.g. C_say("I am sorry, but I am unable to do that because ...")

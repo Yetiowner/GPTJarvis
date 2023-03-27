@@ -3,6 +3,8 @@ import cv2
 import tkinter as tk
 from PIL import Image, ImageTk
 import os
+import time
+import numpy as np
 
 VIDEODIR = r"C:\Users\User\Videos"
 
@@ -21,7 +23,7 @@ def get_videos():
     color_coverted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     thumbnail = Image.fromarray(color_coverted)
     thumbnail = thumbnail.resize((60, 45))
-
+    
     viddat["thumbnail"] = thumbnail
     viddat["videoCapture"] = vidcap
     data[file_name] = viddat
@@ -29,7 +31,6 @@ def get_videos():
   return data
 
 videoData = get_videos()
-
 
 def fast_forward(event):
     global video
@@ -107,7 +108,7 @@ def select_video_GUI():
         video_label.configure(image=thumbnail, text=video_title, compound=tk.TOP)
 
         # bind the label to a function that will be called when the user clicks on it
-        video_label.bind("<Button-1>", lambda event, index=i: helperSelectSpecificVideo(video))
+        video_label.bind("<Button-1>", lambda event, video=video: helperSelectSpecificVideo(video))
 
         # add the label to the frame
         video_label.grid(row=i // cols, column=i % cols)
@@ -196,6 +197,23 @@ def getNameOfVideoCurrentlyPlaying():
   """Returns the string name of the video currently playing as it would appear in getListOfVideos"""
   return os.path.split(video_path)[1]
 
+@Jarvis.readable
+def NumpyToPIL(image):
+    """Converts a numpy array to a PIL Image object"""
+    # Convert BGR to RGB
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # Convert numpy array to PIL Image object
+    return Image.fromarray(image)
+
+@Jarvis.readable
+def PILtoNumpy(image):
+    """Converts a PIL Image object to a numpy array"""
+    # Convert PIL Image object to numpy array
+    image = np.array(image)
+    # Convert RGB to BGR
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    return image
+
 @Jarvis.runnable
 def selectSpecificVideo(name: str):
   """Selects the video with the file name specified. The name should be specific, and can be found in getListOfVideos"""
@@ -214,20 +232,20 @@ def toggle_pause():
     unpause_video()
 
 def startAudioRecording(event):
-  Jarvis.startRecording()
+  app.startRecording()
 
 def stopAudioRecording(event):
-  Jarvis.stopRecording()
+  app.stopRecording()
 
 root = tk.Tk()
 root.title("Video Player")
 
 # Create a frame to hold the video and control buttons
-video_frame = tk.Frame(root)
+video_frame = tk.Frame(root, height=300, width=400)
 video_frame.pack(side=tk.TOP, pady=10)
 
 # Create a canvas to display the video frames
-canvas = tk.Canvas(video_frame)
+canvas = tk.Canvas(video_frame, height=300, width=400)
 canvas.pack()
 
 # Create control buttons
@@ -258,8 +276,6 @@ video_path = None
 paused = False
 stop = True
 
-Jarvis.initiateVoiceListener()
-
 app = Jarvis.JarvisApp(
   appinfo = "This app is a video-player.",
   personality = personalities.NONE, 
@@ -268,6 +284,9 @@ app = Jarvis.JarvisApp(
   minSimilarity = 0.5,
   inbuiltbackgroundlistener = None,
 )
+app.initiateVoiceListener()
+
+video_screen_size = (400, 300)
 
 while True:
   app.update()
@@ -276,10 +295,29 @@ while True:
     if not ret:
       root.update()
       continue
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     h, w, _ = frame.shape
-    if h > 400:
-        frame = cv2.resize(frame, (int(w * 400 / h), 400))
+    resize_ratio = min(video_screen_size[0] / w, video_screen_size[1] / h)
+
+    # Calculate the new dimensions of the resized frame
+    new_w = int(w * resize_ratio)
+    new_h = int(h * resize_ratio)
+
+    # Resize the frame to fit in the video screen
+    resized_frame = cv2.resize(frame, (new_w, new_h))
+
+
+    # Create a black image with the size of the video screen
+    black_image = np.zeros((video_screen_size[1], video_screen_size[0], 3), dtype=np.uint8)
+
+    # Calculate the position to place the resized frame in the center of the black image
+    x_offset = int((video_screen_size[0] - new_w) / 2)
+    y_offset = int((video_screen_size[1] - new_h) / 2)
+
+    # Copy the resized frame into the center of the black image
+    black_image[y_offset:y_offset+new_h, x_offset:x_offset+new_w, :] = resized_frame
+
+    # Convert the image to RGB color space
+    frame = cv2.cvtColor(black_image, cv2.COLOR_BGR2RGB)
     
   if stop:
     root.update()
@@ -299,4 +337,11 @@ while True:
   if not progress_bar.cget('troughcolor'):
       progress_bar.configure(troughcolor='red')
   progress_bar.set(progress)
+
+  # Delay to play video at correct time
+  fps = int(video.get(cv2.CAP_PROP_FPS))
+  current_time = current_frame / fps
+  next_frame_time = (current_frame + 1) / fps
+  delay_time = max(0, (next_frame_time - current_time) * 1000)
+  time.sleep(delay_time / 1000)
   root.update()

@@ -71,7 +71,7 @@ class RunningMode(Enum):
   ASYNC = "async"
 
 class JarvisApp:
-  def __init__(self, appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 20, minSimilarity = 0.5, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j", maxretries = 1):
+  def __init__(self, appinfo = None, includePersonalInfo = True, openai_key = None, sampleCount = 20, minSimilarity = 0.5, memory_retention_time = 900, personality = personalities.JARVIS, maxhistorylength = 10, temperature = 0.5, inbuiltbackgroundlistener = InputMode.VOICE, outputfunc = voicebox.say, outputasync = True, speechHotkey = "alt+j", maxretries = 4):
     
     self.appinfo = appinfo
     self.includePersonalInfo = includePersonalInfo
@@ -85,11 +85,6 @@ class JarvisApp:
 
     functions, readables = self.getFunctions()
 
-    if inbuiltbackgroundlistener == InputMode.TEXT_BOX:
-      voicebox.startTextboxListener()
-    elif inbuiltbackgroundlistener == InputMode.VOICE:
-      startInbuiltVoiceListener(hotkey = speechHotkey)
-
     self.chosenchatbot = chatbot.ChatBot(functions = functions, readables = readables, info = info, sampleCount = sampleCount, minSimilarity = minSimilarity, personality = personality, maxhistorylength = maxhistorylength, temperature = temperature)
     self.memory_retention_time = memory_retention_time
     self.personality = personality
@@ -98,6 +93,29 @@ class JarvisApp:
     self.outputasync = outputasync
     self.runningmode = RunningMode.SYNC
     self.maxretries = maxretries
+  
+  def startInbuiltVoiceListener(self, hotkey = "alt+j"):
+    try:
+      keyboard.clear_all_hotkeys()
+    except AttributeError:
+      pass
+    self.initiateVoiceListener()
+    keyboard.add_hotkey(hotkey, lambda: self.startRecording())
+    keyboard.on_release_key(hotkey.split("+")[-1], lambda event: self.stopRecording())
+  
+  def startInbuiltTextboxListener(self):
+    voicebox.startTextboxListener()
+
+  def initiateVoiceListener(self):
+    voicebox.initiateVoiceListener()
+
+  def startRecording(self):
+    if not voicebox.listening:
+      voicebox.startRecording()
+
+  def stopRecording(self):
+    if voicebox.listening:
+      voicebox.stopRecording()
   
   def getFunctions(self):
     self.function_module_relationship = []
@@ -207,6 +225,8 @@ class JarvisApp:
     print(thingtorun)
     failed = True
     attempts = 0
+    lastSuccessfulRequestIndex = len(self.chosenchatbot.q_and_a_history)
+    failedAtAnyPoint = False
     while attempts <= self.maxretries and failed:
       try:
         self.sendAndReceive(thingtorun, self.runningmode, self.chosenchatbot)
@@ -219,27 +239,26 @@ class JarvisApp:
         tb_str = error[1]
         linefailederror = error[2]
         failed = True
+        failedAtAnyPoint = True
       self.chosenchatbot.addQuestion(string)
       self.chosenchatbot.addAnswer(thingtorun)
       if failed:
         answer = self.chosenchatbot.q_and_a_history[-1]
         answer = answer.split("\n")
-        answer[linefailed-1] += f" # <----- {linefailederror}"
+        answer[linefailed-1] += f" # <----- THIS RAISES AN ERROR! FIX THIS! {linefailederror}"
         answer = "\n".join(answer)
         self.chosenchatbot.q_and_a_history[-1] = answer
-        self.chosenchatbot.addAnswer(utils.loadPrompt("failure.txt", mode = "text").format(error=tb_str))
+        self.chosenchatbot.addQuestion(utils.loadPrompt("failure.txt", mode = "text").format(error=tb_str))
+        if linefailederror.startswith("SyntaxError"):
+          self.chosenchatbot.addQuestion(utils.loadPrompt("SyntaxFailure.txt", mode = "text"))
         thingtorun = self.chosenchatbot.query(string)
         print(thingtorun)
       attempts += 1
-
-  def C_describe(self, dataToDescribe, method):
-    return customfunctions.C_describe(dataToDescribe, method)
+    if failedAtAnyPoint:
+      del self.chosenchatbot.q_and_a_history[lastSuccessfulRequestIndex+1:-1]
 
   def C_say(self, string, variablestoadd = []):
     return customfunctions.C_say(string, self.outputasync, self.personalityimplemented, self.outputfunc, self.personality, variablestoadd)
-
-  def C_interpret(self, question, arguments, description, returns):
-    return customfunctions.C_interpret(question, arguments, description, returns)
 
   def C_choose(self, list_or_dict, prompt, list_description, multiple = False):
     return customfunctions.C_choose(list_or_dict, prompt, list_description, multiple)
@@ -248,7 +267,7 @@ class JarvisApp:
     readables = chatbot.readables
     functions = chatbot.functions
 
-    globalsforrunning = {"C_describe": self.C_describe, "C_say": self.C_say, "C_interpret": self.C_interpret, "C_choose": self.C_choose}
+    globalsforrunning = {"C_say": self.C_say, "C_choose": self.C_choose}
 
     for funcset, functype in [(readables, "R"), (functions, "F")]:
       for func in funcset:
@@ -545,30 +564,6 @@ def checkRequestQueue():
     return None
   else:
     return requestQueue.pop(0)
-
-def startInbuiltVoiceListener(hotkey = "alt+j"):
-  try:
-    keyboard.clear_all_hotkeys()
-  except AttributeError:
-    pass
-  initiateVoiceListener()
-  keyboard.add_hotkey(hotkey, startRecording)
-  keyboard.on_release_key(hotkey.split("+")[-1], stopRecordingWithArg)
-
-def initiateVoiceListener():
-  voicebox.initiateVoiceListener()
-
-def startRecording():
-  if not voicebox.listening:
-    voicebox.startRecording()
-
-def stopRecording():
-  if voicebox.listening:
-    voicebox.stopRecording()
-
-def stopRecordingWithArg(arg):
-  """Use this function to get out of the fact that on_release_key gives an argument"""
-  stopRecording()
 
 def runnableHiddenDecorator(func):
 
